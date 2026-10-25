@@ -1,0 +1,34 @@
+set_override:
+  fields:
+    action:
+      required: true
+      selector:
+        select:
+          translation_key: action
+          options:
+            - charge
+            - discharge
+            - hold
+            - self_consumption
+    start:
+      selector:
+        datetime:
+    end:
+      selector:
+        datetime:
+    hours:
+      selector:
+        number:
+          min: 0.25
+          max: 48
+          step: 0.25
+          unit_of_measurement: h
+    power_w:
+      selector:
+        number:
+          min: 100
+          max: 2500
+          step: 50
+          unit_of_measurement: W
+clear_override:
+replan:

@@ -1,0 +1,350 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Marstek Energy Trader is already set up."
+    },
+    "error": {
+      "marstek_missing": "These Marstek entities were not found: {entities}. Check that the Marstek Venus Modbus integration is set up for this battery.",
+      "marstek_disabled": "These Marstek entities are disabled: {entities}. Enable them under Settings → Devices → your Marstek → Entities, then try again.",
+      "invalid_price_sensor": "This sensor has no price forecast in a known format (raw_today/raw_tomorrow, prices_today/prices_tomorrow or prices).",
+      "required": "Required for the chosen option."
+    },
+    "step": {
+      "user": {
+        "title": "Battery",
+        "description": "Choose the Marstek Venus (from the Marstek Venus Modbus integration). Force mode, the charge/discharge power setpoints and RS485 control mode must be enabled entities.",
+        "data": {
+          "marstek_entry": "Marstek battery",
+          "battery_power_sign": "Battery power sensor sign",
+          "capacity_kwh": "Usable capacity",
+          "round_trip_efficiency": "Round-trip efficiency"
+        },
+        "data_description": {
+          "battery_power_sign": "Look at the Marstek battery power sensor while it charges: positive or negative?",
+          "capacity_kwh": "Leave empty to use the capacity the battery reports.",
+          "round_trip_efficiency": "Share of the energy you get back after charging and discharging. 85% is a typical value."
+        }
+      },
+      "prices": {
+        "title": "Prices",
+        "description": "The price sensor needs the prices for the coming hours as an attribute, like ANWB Energie, Nord Pool or ENTSO-e provide.",
+        "data": {
+          "price_sensor": "Price sensor (€/kWh)",
+          "feed_in_mode": "Feed-in price",
+          "feed_in_sensor": "Feed-in price sensor",
+          "feed_in_offset": "Amount added to the price (€/kWh)",
+          "feed_in_fixed": "Fixed feed-in price (€/kWh)",
+          "feed_in_cost": "Feed-in costs (€/kWh)"
+        },
+        "data_description": {
+          "price_sensor": "The price you pay, including taxes, for example sensor.anwb_energie_stroom_all_in.",
+          "feed_in_mode": "What you get for energy you send to the grid.",
+          "feed_in_offset": "Only for 'price plus amount'; use a negative amount for a lower feed-in price.",
+          "feed_in_cost": "Subtracted from every feed-in price, for example 'terugleverkosten'."
+        }
+      },
+      "sources": {
+        "title": "Meter, sun and consumption",
+        "description": "All optional, but they make the plan and the savings more accurate.",
+        "data": {
+          "grid_power_sensor": "Grid power sensor (W)",
+          "grid_power_sign": "Grid power sign",
+          "solar_source": "Solar forecast",
+          "forecast_solar_entry": "Forecast.Solar",
+          "solcast_today": "Solcast forecast today",
+          "solcast_tomorrow": "Solcast forecast tomorrow",
+          "weather_entity": "Weather",
+          "pv_peak_power": "Solar panel peak power",
+          "consumption_sensor": "Household consumption sensor",
+          "base_load": "Average consumption"
+        },
+        "data_description": {
+          "grid_power_sensor": "For example the active power of a HomeWizard P1 meter. Used to tell grid and solar energy apart.",
+          "solar_source": "Forecast.Solar is built into Home Assistant; Solcast is a HACS integration.",
+          "weather_entity": "Used for a rough solar estimate from cloud cover when there is no solar forecast.",
+          "pv_peak_power": "Needed for the weather estimate.",
+          "consumption_sensor": "Power (W) or energy (kWh) of the house. The average per hour of the last 7 days is used.",
+          "base_load": "Used when there is no consumption sensor."
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "marstek_missing": "These Marstek entities were not found: {entities}. Check that the Marstek Venus Modbus integration is set up for this battery.",
+      "marstek_disabled": "These Marstek entities are disabled: {entities}. Enable them under Settings → Devices → your Marstek → Entities, then try again.",
+      "invalid_price_sensor": "This sensor has no price forecast in a known format (raw_today/raw_tomorrow, prices_today/prices_tomorrow or prices).",
+      "required": "Required for the chosen option."
+    },
+    "step": {
+      "init": {
+        "title": "Battery",
+        "description": "Choose the Marstek Venus (from the Marstek Venus Modbus integration). Force mode, the charge/discharge power setpoints and RS485 control mode must be enabled entities.",
+        "data": {
+          "marstek_entry": "Marstek battery",
+          "battery_power_sign": "Battery power sensor sign",
+          "capacity_kwh": "Usable capacity",
+          "round_trip_efficiency": "Round-trip efficiency"
+        },
+        "data_description": {
+          "battery_power_sign": "Look at the Marstek battery power sensor while it charges: positive or negative?",
+          "capacity_kwh": "Leave empty to use the capacity the battery reports.",
+          "round_trip_efficiency": "Share of the energy you get back after charging and discharging. 85% is a typical value."
+        }
+      },
+      "prices": {
+        "title": "Prices",
+        "description": "The price sensor needs the prices for the coming hours as an attribute, like ANWB Energie, Nord Pool or ENTSO-e provide.",
+        "data": {
+          "price_sensor": "Price sensor (€/kWh)",
+          "feed_in_mode": "Feed-in price",
+          "feed_in_sensor": "Feed-in price sensor",
+          "feed_in_offset": "Amount added to the price (€/kWh)",
+          "feed_in_fixed": "Fixed feed-in price (€/kWh)",
+          "feed_in_cost": "Feed-in costs (€/kWh)"
+        },
+        "data_description": {
+          "price_sensor": "The price you pay, including taxes, for example sensor.anwb_energie_stroom_all_in.",
+          "feed_in_mode": "What you get for energy you send to the grid.",
+          "feed_in_offset": "Only for 'price plus amount'; use a negative amount for a lower feed-in price.",
+          "feed_in_cost": "Subtracted from every feed-in price, for example 'terugleverkosten'."
+        }
+      },
+      "sources": {
+        "title": "Meter, sun and consumption",
+        "description": "All optional, but they make the plan and the savings more accurate.",
+        "data": {
+          "grid_power_sensor": "Grid power sensor (W)",
+          "grid_power_sign": "Grid power sign",
+          "solar_source": "Solar forecast",
+          "forecast_solar_entry": "Forecast.Solar",
+          "solcast_today": "Solcast forecast today",
+          "solcast_tomorrow": "Solcast forecast tomorrow",
+          "weather_entity": "Weather",
+          "pv_peak_power": "Solar panel peak power",
+          "consumption_sensor": "Household consumption sensor",
+          "base_load": "Average consumption"
+        },
+        "data_description": {
+          "grid_power_sensor": "For example the active power of a HomeWizard P1 meter. Used to tell grid and solar energy apart.",
+          "solar_source": "Forecast.Solar is built into Home Assistant; Solcast is a HACS integration.",
+          "weather_entity": "Used for a rough solar estimate from cloud cover when there is no solar forecast.",
+          "pv_peak_power": "Needed for the weather estimate.",
+          "consumption_sensor": "Power (W) or energy (kWh) of the house. The average per hour of the last 7 days is used.",
+          "base_load": "Used when there is no consumption sensor."
+        }
+      }
+    }
+  },
+  "selector": {
+    "battery_power_sign": {
+      "options": {
+        "positive_discharge": "Positive while discharging",
+        "positive_charge": "Positive while charging"
+      }
+    },
+    "grid_power_sign": {
+      "options": {
+        "import_positive": "Positive while importing",
+        "import_negative": "Negative while importing"
+      }
+    },
+    "feed_in_mode": {
+      "options": {
+        "same": "Same as the price",
+        "sensor": "Separate price sensor",
+        "offset": "Price plus amount",
+        "fixed": "Fixed price"
+      }
+    },
+    "solar_source": {
+      "options": {
+        "none": "None",
+        "forecast_solar": "Forecast.Solar",
+        "solcast": "Solcast"
+      }
+    },
+    "action": {
+      "options": {
+        "charge": "Charge",
+        "discharge": "Discharge",
+        "hold": "Hold",
+        "self_consumption": "Self-consumption"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "replan": {
+        "name": "Plan again"
+      }
+    },
+    "number": {
+      "min_profit": {
+        "name": "Minimum profit per kWh"
+      },
+      "min_soc": {
+        "name": "Reserve battery level"
+      },
+      "max_soc": {
+        "name": "Maximum battery level"
+      },
+      "max_charge_power": {
+        "name": "Maximum charge power"
+      },
+      "max_discharge_power": {
+        "name": "Maximum discharge power"
+      },
+      "forecast_trust": {
+        "name": "Solar forecast trust"
+      },
+      "override_hours": {
+        "name": "Override duration"
+      },
+      "watchdog_minutes": {
+        "name": "Watchdog interval"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "off": "Off",
+          "solar": "Solar only",
+          "price": "Price only",
+          "solar_price": "Solar and price"
+        }
+      },
+      "strategy": {
+        "name": "Strategy",
+        "state": {
+          "conservative": "Conservative",
+          "balanced": "Balanced",
+          "aggressive": "Aggressive",
+          "custom": "Custom"
+        }
+      },
+      "override": {
+        "name": "Manual override",
+        "state": {
+          "auto": "Automatic",
+          "charge": "Charge",
+          "discharge": "Discharge",
+          "hold": "Hold",
+          "self_consumption": "Self-consumption"
+        }
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "charge": "Charge",
+          "discharge": "Discharge",
+          "hold": "Hold",
+          "self_consumption": "Self-consumption",
+          "off": "Off",
+          "waiting": "Waiting for data",
+          "error": "Error"
+        }
+      },
+      "plan": {
+        "name": "Expected savings of plan"
+      },
+      "next_change": {
+        "name": "Next change"
+      },
+      "target_power": {
+        "name": "Planned battery power"
+      },
+      "planned_soc": {
+        "name": "Planned battery level"
+      },
+      "savings_total": {
+        "name": "Savings total"
+      },
+      "savings_today": {
+        "name": "Savings today"
+      },
+      "charge_cost_total": {
+        "name": "Charge cost total"
+      },
+      "discharge_value_total": {
+        "name": "Discharge value total"
+      },
+      "planned_savings_total": {
+        "name": "Planned savings total"
+      },
+      "grid_to_battery": {
+        "name": "Grid to battery"
+      },
+      "solar_to_battery": {
+        "name": "Solar to battery"
+      },
+      "battery_to_home": {
+        "name": "Battery to home"
+      },
+      "battery_to_grid": {
+        "name": "Battery to grid"
+      },
+      "average_stored_price": {
+        "name": "Average price of stored energy"
+      }
+    },
+    "switch": {
+      "dry_run": {
+        "name": "Dry run"
+      },
+      "allow_grid_export": {
+        "name": "Allow grid export"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Marstek Energy Trader is not loaded."
+    },
+    "end_before_start": {
+      "message": "The end must be after the start."
+    },
+    "marstek_entities": {
+      "message": "Marstek entities missing or disabled: {entities}"
+    }
+  },
+  "services": {
+    "set_override": {
+      "name": "Set override",
+      "description": "Run a fixed action for a time window instead of the plan.",
+      "fields": {
+        "action": {
+          "name": "Action",
+          "description": "What the battery should do."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Defaults to now."
+        },
+        "end": {
+          "name": "End",
+          "description": "End of the window (or use hours)."
+        },
+        "hours": {
+          "name": "Hours",
+          "description": "Length of the window (default 1 hour)."
+        },
+        "power_w": {
+          "name": "Power",
+          "description": "Charge or discharge power; defaults to the maximum."
+        }
+      }
+    },
+    "clear_override": {
+      "name": "Clear override",
+      "description": "Remove all manual overrides."
+    },
+    "replan": {
+      "name": "Plan again",
+      "description": "Make a new plan now."
+    }
+  }
+}

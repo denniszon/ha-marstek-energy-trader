@@ -1,0 +1,350 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Marstek Energy Trader is al ingesteld."
+    },
+    "error": {
+      "marstek_missing": "Deze Marstek-entiteiten zijn niet gevonden: {entities}. Controleer of de Marstek Venus Modbus-integratie voor deze batterij is ingesteld.",
+      "marstek_disabled": "Deze Marstek-entiteiten staan uit: {entities}. Zet ze aan via Instellingen → Apparaten → je Marstek → Entiteiten en probeer het opnieuw.",
+      "invalid_price_sensor": "Deze sensor heeft geen prijsverwachting in een bekend formaat (raw_today/raw_tomorrow, prices_today/prices_tomorrow of prices).",
+      "required": "Nodig voor de gekozen optie."
+    },
+    "step": {
+      "user": {
+        "title": "Batterij",
+        "description": "Kies de Marstek Venus (uit de Marstek Venus Modbus-integratie). Force mode, de laad/ontlaad-vermogens en RS485 control mode moeten ingeschakelde entiteiten zijn.",
+        "data": {
+          "marstek_entry": "Marstek-batterij",
+          "battery_power_sign": "Teken van de batterijvermogen-sensor",
+          "capacity_kwh": "Bruikbare capaciteit",
+          "round_trip_efficiency": "Rendement laden + ontladen"
+        },
+        "data_description": {
+          "battery_power_sign": "Kijk naar de batterijvermogen-sensor van de Marstek tijdens het laden: positief of negatief?",
+          "capacity_kwh": "Leeg laten om de capaciteit te gebruiken die de batterij doorgeeft.",
+          "round_trip_efficiency": "Deel van de energie dat je terugkrijgt na laden en ontladen. 85% is een gangbare waarde."
+        }
+      },
+      "prices": {
+        "title": "Prijzen",
+        "description": "De prijssensor moet de prijzen van de komende uren als attribuut hebben, zoals ANWB Energie, Nord Pool of ENTSO-e.",
+        "data": {
+          "price_sensor": "Prijssensor (€/kWh)",
+          "feed_in_mode": "Terugleverprijs",
+          "feed_in_sensor": "Sensor terugleverprijs",
+          "feed_in_offset": "Bedrag bovenop de prijs (€/kWh)",
+          "feed_in_fixed": "Vaste terugleverprijs (€/kWh)",
+          "feed_in_cost": "Terugleverkosten (€/kWh)"
+        },
+        "data_description": {
+          "price_sensor": "De prijs die je betaalt, inclusief belastingen, bijvoorbeeld sensor.anwb_energie_stroom_all_in.",
+          "feed_in_mode": "Wat je krijgt voor energie die je aan het net levert.",
+          "feed_in_offset": "Alleen voor 'prijs plus bedrag'; gebruik een negatief bedrag voor een lagere terugleverprijs.",
+          "feed_in_cost": "Gaat van elke terugleverprijs af."
+        }
+      },
+      "sources": {
+        "title": "Meter, zon en verbruik",
+        "description": "Allemaal optioneel, maar de planning en de besparing worden er nauwkeuriger door.",
+        "data": {
+          "grid_power_sensor": "Netvermogen-sensor (W)",
+          "grid_power_sign": "Teken van het netvermogen",
+          "solar_source": "Zonneverwachting",
+          "forecast_solar_entry": "Forecast.Solar",
+          "solcast_today": "Solcast-verwachting vandaag",
+          "solcast_tomorrow": "Solcast-verwachting morgen",
+          "weather_entity": "Weer",
+          "pv_peak_power": "Piekvermogen zonnepanelen",
+          "consumption_sensor": "Sensor huishoudelijk verbruik",
+          "base_load": "Gemiddeld verbruik"
+        },
+        "data_description": {
+          "grid_power_sensor": "Bijvoorbeeld het actieve vermogen van een HomeWizard P1-meter. Hiermee wordt net- en zonne-energie uit elkaar gehouden.",
+          "solar_source": "Forecast.Solar zit in Home Assistant; Solcast is een HACS-integratie.",
+          "weather_entity": "Voor een grove zonschatting op basis van bewolking als er geen zonneverwachting is.",
+          "pv_peak_power": "Nodig voor de schatting op basis van het weer.",
+          "consumption_sensor": "Vermogen (W) of energie (kWh) van het huis. Het gemiddelde per uur van de laatste 7 dagen wordt gebruikt.",
+          "base_load": "Gebruikt als er geen verbruikssensor is."
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "marstek_missing": "Deze Marstek-entiteiten zijn niet gevonden: {entities}. Controleer of de Marstek Venus Modbus-integratie voor deze batterij is ingesteld.",
+      "marstek_disabled": "Deze Marstek-entiteiten staan uit: {entities}. Zet ze aan via Instellingen → Apparaten → je Marstek → Entiteiten en probeer het opnieuw.",
+      "invalid_price_sensor": "Deze sensor heeft geen prijsverwachting in een bekend formaat (raw_today/raw_tomorrow, prices_today/prices_tomorrow of prices).",
+      "required": "Nodig voor de gekozen optie."
+    },
+    "step": {
+      "init": {
+        "title": "Batterij",
+        "description": "Kies de Marstek Venus (uit de Marstek Venus Modbus-integratie). Force mode, de laad/ontlaad-vermogens en RS485 control mode moeten ingeschakelde entiteiten zijn.",
+        "data": {
+          "marstek_entry": "Marstek-batterij",
+          "battery_power_sign": "Teken van de batterijvermogen-sensor",
+          "capacity_kwh": "Bruikbare capaciteit",
+          "round_trip_efficiency": "Rendement laden + ontladen"
+        },
+        "data_description": {
+          "battery_power_sign": "Kijk naar de batterijvermogen-sensor van de Marstek tijdens het laden: positief of negatief?",
+          "capacity_kwh": "Leeg laten om de capaciteit te gebruiken die de batterij doorgeeft.",
+          "round_trip_efficiency": "Deel van de energie dat je terugkrijgt na laden en ontladen. 85% is een gangbare waarde."
+        }
+      },
+      "prices": {
+        "title": "Prijzen",
+        "description": "De prijssensor moet de prijzen van de komende uren als attribuut hebben, zoals ANWB Energie, Nord Pool of ENTSO-e.",
+        "data": {
+          "price_sensor": "Prijssensor (€/kWh)",
+          "feed_in_mode": "Terugleverprijs",
+          "feed_in_sensor": "Sensor terugleverprijs",
+          "feed_in_offset": "Bedrag bovenop de prijs (€/kWh)",
+          "feed_in_fixed": "Vaste terugleverprijs (€/kWh)",
+          "feed_in_cost": "Terugleverkosten (€/kWh)"
+        },
+        "data_description": {
+          "price_sensor": "De prijs die je betaalt, inclusief belastingen, bijvoorbeeld sensor.anwb_energie_stroom_all_in.",
+          "feed_in_mode": "Wat je krijgt voor energie die je aan het net levert.",
+          "feed_in_offset": "Alleen voor 'prijs plus bedrag'; gebruik een negatief bedrag voor een lagere terugleverprijs.",
+          "feed_in_cost": "Gaat van elke terugleverprijs af."
+        }
+      },
+      "sources": {
+        "title": "Meter, zon en verbruik",
+        "description": "Allemaal optioneel, maar de planning en de besparing worden er nauwkeuriger door.",
+        "data": {
+          "grid_power_sensor": "Netvermogen-sensor (W)",
+          "grid_power_sign": "Teken van het netvermogen",
+          "solar_source": "Zonneverwachting",
+          "forecast_solar_entry": "Forecast.Solar",
+          "solcast_today": "Solcast-verwachting vandaag",
+          "solcast_tomorrow": "Solcast-verwachting morgen",
+          "weather_entity": "Weer",
+          "pv_peak_power": "Piekvermogen zonnepanelen",
+          "consumption_sensor": "Sensor huishoudelijk verbruik",
+          "base_load": "Gemiddeld verbruik"
+        },
+        "data_description": {
+          "grid_power_sensor": "Bijvoorbeeld het actieve vermogen van een HomeWizard P1-meter. Hiermee wordt net- en zonne-energie uit elkaar gehouden.",
+          "solar_source": "Forecast.Solar zit in Home Assistant; Solcast is een HACS-integratie.",
+          "weather_entity": "Voor een grove zonschatting op basis van bewolking als er geen zonneverwachting is.",
+          "pv_peak_power": "Nodig voor de schatting op basis van het weer.",
+          "consumption_sensor": "Vermogen (W) of energie (kWh) van het huis. Het gemiddelde per uur van de laatste 7 dagen wordt gebruikt.",
+          "base_load": "Gebruikt als er geen verbruikssensor is."
+        }
+      }
+    }
+  },
+  "selector": {
+    "battery_power_sign": {
+      "options": {
+        "positive_discharge": "Positief tijdens ontladen",
+        "positive_charge": "Positief tijdens laden"
+      }
+    },
+    "grid_power_sign": {
+      "options": {
+        "import_positive": "Positief bij afname",
+        "import_negative": "Negatief bij afname"
+      }
+    },
+    "feed_in_mode": {
+      "options": {
+        "same": "Gelijk aan de prijs",
+        "sensor": "Aparte prijssensor",
+        "offset": "Prijs plus bedrag",
+        "fixed": "Vaste prijs"
+      }
+    },
+    "solar_source": {
+      "options": {
+        "none": "Geen",
+        "forecast_solar": "Forecast.Solar",
+        "solcast": "Solcast"
+      }
+    },
+    "action": {
+      "options": {
+        "charge": "Laden",
+        "discharge": "Ontladen",
+        "hold": "Vasthouden",
+        "self_consumption": "Zelfverbruik"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "replan": {
+        "name": "Opnieuw plannen"
+      }
+    },
+    "number": {
+      "min_profit": {
+        "name": "Minimale winst per kWh"
+      },
+      "min_soc": {
+        "name": "Reserve batterijniveau"
+      },
+      "max_soc": {
+        "name": "Maximaal batterijniveau"
+      },
+      "max_charge_power": {
+        "name": "Maximaal laadvermogen"
+      },
+      "max_discharge_power": {
+        "name": "Maximaal ontlaadvermogen"
+      },
+      "forecast_trust": {
+        "name": "Vertrouwen in zonneverwachting"
+      },
+      "override_hours": {
+        "name": "Duur handmatige actie"
+      },
+      "watchdog_minutes": {
+        "name": "Controle-interval"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus",
+        "state": {
+          "off": "Uit",
+          "solar": "Alleen zon",
+          "price": "Alleen prijs",
+          "solar_price": "Zon en prijs"
+        }
+      },
+      "strategy": {
+        "name": "Strategie",
+        "state": {
+          "conservative": "Voorzichtig",
+          "balanced": "Gebalanceerd",
+          "aggressive": "Agressief",
+          "custom": "Aangepast"
+        }
+      },
+      "override": {
+        "name": "Handmatige actie",
+        "state": {
+          "auto": "Automatisch",
+          "charge": "Laden",
+          "discharge": "Ontladen",
+          "hold": "Vasthouden",
+          "self_consumption": "Zelfverbruik"
+        }
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "charge": "Laden",
+          "discharge": "Ontladen",
+          "hold": "Vasthouden",
+          "self_consumption": "Zelfverbruik",
+          "off": "Uit",
+          "waiting": "Wacht op gegevens",
+          "error": "Fout"
+        }
+      },
+      "plan": {
+        "name": "Verwachte besparing planning"
+      },
+      "next_change": {
+        "name": "Volgende wijziging"
+      },
+      "target_power": {
+        "name": "Gepland batterijvermogen"
+      },
+      "planned_soc": {
+        "name": "Gepland batterijniveau"
+      },
+      "savings_total": {
+        "name": "Besparing totaal"
+      },
+      "savings_today": {
+        "name": "Besparing vandaag"
+      },
+      "charge_cost_total": {
+        "name": "Laadkosten totaal"
+      },
+      "discharge_value_total": {
+        "name": "Ontlaadwaarde totaal"
+      },
+      "planned_savings_total": {
+        "name": "Geplande besparing totaal"
+      },
+      "grid_to_battery": {
+        "name": "Net naar batterij"
+      },
+      "solar_to_battery": {
+        "name": "Zon naar batterij"
+      },
+      "battery_to_home": {
+        "name": "Batterij naar huis"
+      },
+      "battery_to_grid": {
+        "name": "Batterij naar net"
+      },
+      "average_stored_price": {
+        "name": "Gemiddelde prijs opgeslagen energie"
+      }
+    },
+    "switch": {
+      "dry_run": {
+        "name": "Proefdraaien"
+      },
+      "allow_grid_export": {
+        "name": "Terugleveren toestaan"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Marstek Energy Trader is niet geladen."
+    },
+    "end_before_start": {
+      "message": "Het einde moet na het begin liggen."
+    },
+    "marstek_entities": {
+      "message": "Marstek-entiteiten ontbreken of staan uit: {entities}"
+    }
+  },
+  "services": {
+    "set_override": {
+      "name": "Handmatige actie instellen",
+      "description": "Voer een vaste actie uit in een tijdvak in plaats van de planning.",
+      "fields": {
+        "action": {
+          "name": "Actie",
+          "description": "Wat de batterij moet doen."
+        },
+        "start": {
+          "name": "Begin",
+          "description": "Standaard nu."
+        },
+        "end": {
+          "name": "Einde",
+          "description": "Einde van het tijdvak (of gebruik uren)."
+        },
+        "hours": {
+          "name": "Uren",
+          "description": "Lengte van het tijdvak (standaard 1 uur)."
+        },
+        "power_w": {
+          "name": "Vermogen",
+          "description": "Laad- of ontlaadvermogen; standaard het maximum."
+        }
+      }
+    },
+    "clear_override": {
+      "name": "Handmatige acties wissen",
+      "description": "Verwijder alle handmatige acties."
+    },
+    "replan": {
+      "name": "Opnieuw plannen",
+      "description": "Maak nu een nieuwe planning."
+    }
+  }
+}

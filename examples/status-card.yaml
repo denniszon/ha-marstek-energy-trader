@@ -1,0 +1,27 @@
+# What the trader does now, why, and the next 12 time slots.
+type: markdown
+title: Batterij-handelaar
+content: |
+  {% set status = states('sensor.marstek_energy_trader_status') %}
+  {% set names = {'charge': '🔋 Laden', 'discharge': '⚡ Ontladen', 'hold': '⏸️ Vasthouden',
+     'self_consumption': '🏠 Zelfverbruik', 'off': '⏹️ Uit', 'waiting': '⏳ Wacht op gegevens',
+     'error': '⚠️ Fout'} %}
+  {% if is_state('switch.marstek_energy_trader_dry_run', 'on') %}
+  > 🧪 **Proefdraaien**: er wordt niets naar de Marstek gestuurd.
+  {% endif %}
+  **{{ names.get(status, status) }}**
+  {%- set power = state_attr('sensor.marstek_energy_trader_status', 'power_w') %}
+  {%- if power %} · {{ power }} W{% endif %}
+
+  {{ state_attr('sensor.marstek_energy_trader_status', 'reason') }}
+
+  {% set until = state_attr('sensor.marstek_energy_trader_status', 'override_until') %}
+  {% if until %}✋ Handmatig tot {{ as_timestamp(until) | timestamp_custom('%H:%M') }}{% endif %}
+  {% set error = state_attr('sensor.marstek_energy_trader_status', 'last_error') %}
+  {% if error %}⚠️ {{ error }}{% endif %}
+
+  | Tijd | Actie | Prijs | Batterij | Waarom |
+  |:--|:--|--:|--:|:--|
+  {% for s in (state_attr('sensor.marstek_energy_trader_plan', 'plan') or [])[:12] -%}
+  | {{ as_timestamp(s.start) | timestamp_custom('%H:%M') }} | {{ names.get(s.action, s.action) }}{% if s.override %} ✋{% endif %} | €{{ '%.2f' | format(s.buy) }} | {{ s.soc_end | round(0) | int }}% | {{ s.reason }} |
+  {% endfor %}

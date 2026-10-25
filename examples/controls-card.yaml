@@ -1,0 +1,21 @@
+# Settings: how eager the trader is, limits and manual control.
+type: entities
+title: Instellingen batterij
+entities:
+  - entity: select.marstek_energy_trader_mode
+  - entity: switch.marstek_energy_trader_dry_run
+  - type: section
+    label: Hoe agressief
+  - entity: select.marstek_energy_trader_strategy
+  - entity: number.marstek_energy_trader_min_profit
+  - entity: number.marstek_energy_trader_min_soc
+  - entity: number.marstek_energy_trader_max_soc
+  - entity: number.marstek_energy_trader_max_charge_power
+  - entity: number.marstek_energy_trader_max_discharge_power
+  - entity: number.marstek_energy_trader_forecast_trust
+  - entity: switch.marstek_energy_trader_allow_grid_export
+  - type: section
+    label: Handmatig ingrijpen
+  - entity: select.marstek_energy_trader_override
+  - entity: number.marstek_energy_trader_override_hours
+  - entity: button.marstek_energy_trader_replan

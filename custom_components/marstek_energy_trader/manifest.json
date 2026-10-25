@@ -1,0 +1,20 @@
+{
+  "domain": "marstek_energy_trader",
+  "name": "Marstek Energy Trader",
+  "after_dependencies": [
+    "forecast_solar",
+    "recorder",
+    "weather"
+  ],
+  "codeowners": [
+    "@denniszon"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/denniszon/ha-marstek-energy-trader",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/denniszon/ha-marstek-energy-trader/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

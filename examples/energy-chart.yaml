@@ -1,0 +1,67 @@
+# Energy plan: what the battery will do (positive = charging, negative =
+# discharging) next to the expected solar production and household use.
+# Requires apexcharts-card (HACS → Frontend).
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Energieplanning
+graph_span: 36h
+span:
+  start: hour
+now:
+  show: true
+  label: Nu
+yaxis:
+  - decimals: 0
+    apex_config:
+      title:
+        text: W
+apex_config:
+  legend:
+    show: true
+  plotOptions:
+    bar:
+      columnWidth: "85%"
+series:
+  - entity: sensor.marstek_energy_trader_plan
+    name: Batterij
+    type: column
+    unit: W
+    float_precision: 0
+    color: "#1a9850"
+    # Negative bars (discharging) are red.
+    color_threshold:
+      - value: -10000
+        color: "#d73027"
+      - value: 0
+        color: "#1a9850"
+    data_generator: |
+      return (entity.attributes.plan || []).map((s) => [new Date(s.start).getTime(), s.power_w]);
+  - entity: sensor.marstek_energy_trader_plan
+    name: Zon (verwacht)
+    type: area
+    curve: stepline
+    opacity: 0.3
+    color: "#fdae61"
+    unit: W
+    float_precision: 0
+    data_generator: |
+      return (entity.attributes.plan || []).map((s) => {
+        const hours = (new Date(s.end) - new Date(s.start)) / 3600000;
+        return [new Date(s.start).getTime(), Math.round(s.solar_kwh / hours * 1000)];
+      });
+  - entity: sensor.marstek_energy_trader_plan
+    name: Verbruik (verwacht)
+    type: line
+    curve: stepline
+    stroke_width: 2
+    color: var(--primary-text-color)
+    unit: W
+    float_precision: 0
+    data_generator: |
+      return (entity.attributes.plan || []).map((s) => {
+        const hours = (new Date(s.end) - new Date(s.start)) / 3600000;
+        return [new Date(s.start).getTime(), Math.round(s.load_kwh / hours * 1000)];
+      });
+experimental:
+  color_threshold: true

@@ -1,0 +1,53 @@
+{
+  "entity": {
+    "button": {
+      "replan": { "default": "mdi:refresh" }
+    },
+    "number": {
+      "min_profit": { "default": "mdi:cash-plus" },
+      "min_soc": { "default": "mdi:battery-low" },
+      "max_soc": { "default": "mdi:battery-high" },
+      "max_charge_power": { "default": "mdi:battery-charging" },
+      "max_discharge_power": { "default": "mdi:battery-arrow-down" },
+      "forecast_trust": { "default": "mdi:weather-partly-cloudy" },
+      "override_hours": { "default": "mdi:timer-outline" },
+      "watchdog_minutes": { "default": "mdi:dog-side" }
+    },
+    "select": {
+      "mode": { "default": "mdi:robot" },
+      "strategy": { "default": "mdi:speedometer" },
+      "override": { "default": "mdi:hand-back-right" }
+    },
+    "sensor": {
+      "status": {
+        "default": "mdi:battery-sync",
+        "state": {
+          "charge": "mdi:battery-charging",
+          "discharge": "mdi:battery-arrow-down",
+          "hold": "mdi:battery-lock",
+          "self_consumption": "mdi:home-battery",
+          "off": "mdi:power",
+          "waiting": "mdi:timer-sand",
+          "error": "mdi:alert"
+        }
+      },
+      "plan": { "default": "mdi:chart-timeline-variant" },
+      "next_change": { "default": "mdi:clock-start" },
+      "target_power": { "default": "mdi:flash" },
+      "average_stored_price": { "default": "mdi:currency-eur" },
+      "grid_to_battery": { "default": "mdi:transmission-tower-import" },
+      "solar_to_battery": { "default": "mdi:solar-power" },
+      "battery_to_home": { "default": "mdi:home-import-outline" },
+      "battery_to_grid": { "default": "mdi:transmission-tower-export" }
+    },
+    "switch": {
+      "dry_run": { "default": "mdi:test-tube" },
+      "allow_grid_export": { "default": "mdi:transmission-tower-export" }
+    }
+  },
+  "services": {
+    "set_override": { "service": "mdi:hand-back-right" },
+    "clear_override": { "service": "mdi:hand-back-right-off" },
+    "replan": { "service": "mdi:refresh" }
+  }
+}

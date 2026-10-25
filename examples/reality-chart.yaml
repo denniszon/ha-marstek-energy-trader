@@ -1,0 +1,51 @@
+# Reality versus plan for the last 24 hours: the real battery level and power
+# of the Marstek next to what the trader planned.
+# Requires apexcharts-card (HACS → Frontend).
+# Replace sensor.marstek_battery_soc and sensor.marstek_battery_power with the
+# entities of your Marstek (Settings → Devices → your Marstek).
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Werkelijk en gepland
+graph_span: 24h
+yaxis:
+  - id: soc
+    min: 0
+    max: 100
+    decimals: 0
+  - id: power
+    opposite: true
+    decimals: 0
+apex_config:
+  legend:
+    show: true
+series:
+  - entity: sensor.marstek_battery_soc
+    name: Batterij (werkelijk)
+    yaxis_id: soc
+    stroke_width: 2
+    color: var(--primary-color)
+  - entity: sensor.marstek_energy_trader_planned_soc
+    name: Batterij (gepland)
+    yaxis_id: soc
+    stroke_width: 2
+    curve: stepline
+    color: "#9e9e9e"
+  - entity: sensor.marstek_battery_power
+    name: Vermogen (werkelijk)
+    yaxis_id: power
+    type: area
+    opacity: 0.2
+    color: "#1a9850"
+    group_by:
+      func: avg
+      duration: 5min
+    # The trader shows charging as positive. If your Marstek shows charging as
+    # positive too, remove this line.
+    transform: "return -x;"
+  - entity: sensor.marstek_energy_trader_target_power
+    name: Vermogen (gepland)
+    yaxis_id: power
+    curve: stepline
+    stroke_width: 2
+    color: "#d73027"

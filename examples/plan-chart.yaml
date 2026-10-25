@@ -1,0 +1,127 @@
+# Planning: price per hour coloured by the planned action, plus the planned
+# battery level. Hover a bar to see why the trader chose that action.
+# Requires apexcharts-card (HACS → Frontend).
+#
+# Colours: green = charge, red = discharge, grey = hold, blue = house uses battery
+# (self-consumption). A bar with a dark outline is a manual override.
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Planning batterij
+  show_states: true
+graph_span: 36h
+span:
+  start: hour
+now:
+  show: true
+  label: Nu
+# Only the columns are stacked (ApexCharts stacks bars only by default).
+stacked: true
+yaxis:
+  - id: price
+    decimals: 2
+    apex_config:
+      title:
+        text: €/kWh
+  - id: soc
+    opposite: true
+    min: 0
+    max: 100
+    decimals: 0
+    apex_config:
+      title:
+        text: Batterij %
+apex_config:
+  legend:
+    show: true
+  plotOptions:
+    bar:
+      columnWidth: "85%"
+      borderRadius: 3
+  tooltip:
+    shared: true
+    x:
+      # Hour range and the reason of the planner for that slot.
+      formatter: |
+        EVAL:function(value) {
+          const time = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+          const plan = window.marstekTraderPlan || [];
+          const slot = plan.find((s) => new Date(s.start).getTime() <= value && value < new Date(s.end).getTime());
+          const range = time(value) + ' - ' + time(slot ? new Date(slot.end).getTime() : value + 3600000);
+          return slot && slot.reason ? range + ' · ' + slot.reason : range;
+        }
+series:
+  # One column series per action, stacked so every slot shows one full bar.
+  - entity: sensor.marstek_energy_trader_plan
+    name: Laden
+    type: column
+    yaxis_id: price
+    color: "#1a9850"
+    unit: €/kWh
+    float_precision: 2
+    show:
+      in_header: false
+    data_generator: |
+      const plan = entity.attributes.plan || [];
+      window.marstekTraderPlan = plan;
+      return plan.map((s) => [new Date(s.start).getTime(), s.action === 'charge' ? s.buy : null]);
+  - entity: sensor.marstek_energy_trader_plan
+    name: Ontladen
+    type: column
+    yaxis_id: price
+    color: "#d73027"
+    unit: €/kWh
+    float_precision: 2
+    show:
+      in_header: false
+    data_generator: |
+      const plan = entity.attributes.plan || [];
+      return plan.map((s) => [new Date(s.start).getTime(), s.action === 'discharge' ? s.buy : null]);
+  - entity: sensor.marstek_energy_trader_plan
+    name: Vasthouden
+    type: column
+    yaxis_id: price
+    color: "#9e9e9e"
+    unit: €/kWh
+    float_precision: 2
+    show:
+      in_header: false
+    data_generator: |
+      const plan = entity.attributes.plan || [];
+      return plan.map((s) => [new Date(s.start).getTime(), s.action === 'hold' ? s.buy : null]);
+  - entity: sensor.marstek_energy_trader_plan
+    name: Zelfverbruik
+    type: column
+    yaxis_id: price
+    color: "#4575b4"
+    unit: €/kWh
+    float_precision: 2
+    show:
+      in_header: false
+    data_generator: |
+      const plan = entity.attributes.plan || [];
+      return plan.map((s) => [new Date(s.start).getTime(), s.action === 'self_consumption' ? s.buy : null]);
+  # Planned battery level at the end of each slot.
+  - entity: sensor.marstek_energy_trader_plan
+    name: Batterij
+    type: line
+    curve: straight
+    stroke_width: 3
+    yaxis_id: soc
+    color: var(--primary-color)
+    unit: "%"
+    float_precision: 0
+    show:
+      in_header: false
+    data_generator: |
+      const plan = entity.attributes.plan || [];
+      if (!plan.length) return [];
+      return [[new Date(plan[0].start).getTime(), plan[0].soc_start]].concat(
+        plan.map((s) => [new Date(s.end).getTime(), s.soc_end]));
+  # Header: the expected savings of the plan.
+  - entity: sensor.marstek_energy_trader_plan
+    name: Verwachte besparing
+    unit: €
+    float_precision: 2
+    show:
+      in_chart: false

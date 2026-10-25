@@ -1,0 +1,55 @@
+# Savings: today, in total, per day and where the energy went.
+type: vertical-stack
+cards:
+  - type: glance
+    title: Besparing
+    columns: 4
+    entities:
+      - entity: sensor.marstek_energy_trader_savings_today
+        name: Vandaag
+      - entity: sensor.marstek_energy_trader_savings_total
+        name: Totaal
+      - entity: sensor.marstek_energy_trader_plan
+        name: Planning
+      - entity: sensor.marstek_energy_trader_average_stored_price
+        name: Prijs in batterij
+  # Measured savings per day next to what the plan expected (in dry run: what
+  # it would have saved).
+  - type: statistics-graph
+    title: Besparing per dag
+    chart_type: bar
+    period: day
+    days_to_show: 30
+    stat_types:
+      - change
+    entities:
+      - entity: sensor.marstek_energy_trader_savings_total
+        name: Gemeten
+      - entity: sensor.marstek_energy_trader_planned_savings_total
+        name: Verwacht
+  - type: statistics-graph
+    title: Besparing per maand
+    chart_type: bar
+    period: month
+    days_to_show: 365
+    stat_types:
+      - change
+    entities:
+      - entity: sensor.marstek_energy_trader_savings_total
+        name: Gemeten
+  - type: statistics-graph
+    title: Energiestromen per dag
+    chart_type: bar
+    period: day
+    days_to_show: 14
+    stat_types:
+      - change
+    entities:
+      - entity: sensor.marstek_energy_trader_grid_to_battery
+        name: Net → batterij
+      - entity: sensor.marstek_energy_trader_solar_to_battery
+        name: Zon → batterij
+      - entity: sensor.marstek_energy_trader_battery_to_home
+        name: Batterij → huis
+      - entity: sensor.marstek_energy_trader_battery_to_grid
+        name: Batterij → net
