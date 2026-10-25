@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from custom_components.marstek_energy_trader.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
+from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -96,6 +96,9 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         result["flow_id"], {"solar_source": "none", "base_load": 300}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
+    # The options flow reloads the entry in a task; let it finish.
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
     assert entry.options["round_trip_efficiency"] == 90
     assert entry.options["feed_in_fixed"] == 0.05
     assert entry.options["base_load"] == 300
