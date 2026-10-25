@@ -44,6 +44,9 @@ class TraderSwitch(TraderEntity, SwitchEntity, RestoreEntity):
         return getattr(self.settings, self._key)
 
     async def _async_set(self, value: bool) -> None:
+        if self._key == "dry_run" and value and not self.settings.dry_run:
+            # Don't leave the battery in a forced mode nobody controls anymore.
+            await self.coordinator.async_release()
         setattr(self.settings, self._key, value)
         self.async_write_ha_state()
         await self.coordinator.async_refresh()

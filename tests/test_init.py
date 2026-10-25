@@ -9,9 +9,11 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.marstek_energy_trader.const import DOMAIN, EVENT_ACTION
+from custom_components.marstek_energy_trader.inputs import read_price_sensor
 from custom_components.marstek_energy_trader.marstek import Write
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 from .common import (
     GRID_SENSOR,
@@ -240,3 +242,76 @@ async def test_setup_retries_when_entities_are_disabled(hass: HomeAssistant) -> 
     marstek = add_marstek(hass, disabled=("force_mode",))
     entry = await setup_trader(hass, marstek)
     assert entry.state is ConfigEntryState.SETUP_RETRY
+
+
+async def test_failed_write_is_retried_with_the_plan(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    entry, calls = await _start(hass, freezer, QUARTER_PAST)
+    attempts = []
+
+    async def fail(batch: list[Write]) -> None:
+        attempts.append([w.value for w in batch])
+        raise HomeAssistantError("Modbus timeout")
+
+    entry.runtime_data.controller.async_write = fail
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.state == "error"
+    assert "Modbus timeout" in status.attributes["last_error"]
+
+    # The watchdog retries the charge, not self-consumption, and recovers.
+    entry.runtime_data.controller.async_write = lambda batch: _ok(calls, batch)
+    freezer.tick(timedelta(minutes=6))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert attempts[0][-1] == "charge"
+    assert calls[-1] == (marstek_entity_id("force_mode"), "charge")
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "charge"
+
+
+async def _ok(calls: list, batch: list[Write]) -> None:
+    calls.extend((w.entity_id, w.value) for w in batch)
+
+
+async def test_dry_run_on_and_unload_release_the_battery(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    entry, calls = await _start(hass, freezer, NIGHT)
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    # The Marstek is now charging under RS485 control.
+    hass.states.async_set(marstek_entity_id("rs485_control_mode"), "on")
+    hass.states.async_set(marstek_entity_id("force_mode"), "charge")
+    calls.clear()
+    await _turn(hass, "switch", "turn_on", f"switch.{DOMAIN}_dry_run")
+    assert calls == [(marstek_entity_id("rs485_control_mode"), False)]
+
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    calls.clear()
+    await hass.config_entries.async_unload(entry.entry_id)
+    assert calls == [(marstek_entity_id("rs485_control_mode"), False)]
+
+
+async def test_reserve_stops_self_consumption(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    _, calls = await _start(hass, freezer, EVENING)
+    # Battery at the reserve (20%) while the house imports from the grid.
+    hass.states.async_set(GRID_SENSOR, "500", {"unit_of_measurement": "W"})
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.attributes["marstek_action"] == "hold"
+    assert calls[-1] == (marstek_entity_id("force_mode"), "standby")
+
+
+async def test_price_units_are_converted(hass: HomeAssistant) -> None:
+    for unit, value in (("ct/kWh", 14), ("€/MWh", 140), ("EUR/kWh", 0.14)):
+        hass.states.async_set(
+            "sensor.price",
+            "0",
+            {
+                "unit_of_measurement": unit,
+                "raw_today": [{"start": "2026-10-26T03:00:00+01:00", "value": value}],
+            },
+        )
+        assert read_price_sensor(hass, "sensor.price")[0].value == 0.14

@@ -10,9 +10,10 @@ import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import (
+    async_track_point_in_time,
     async_track_state_change_event,
     async_track_time_change,
     async_track_time_interval,
@@ -22,6 +23,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     ACTION_DISCHARGE,
+    ACTION_HOLD,
     ACTION_SELF,
     CONF_FEED_IN_SENSOR,
     CONF_PRICE_SENSOR,
@@ -115,6 +117,7 @@ class Decision:
 class TraderData:
     """Result of a planning round."""
 
+    # The planned action, or off/waiting; error after a failed write.
     status: str
     plan: Plan | None = None
     power_w: int = 0
@@ -157,6 +160,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         self._released = False
         self._planned_at: datetime | None = None
         self._last_apply: datetime | None = None
+        self._override_timers: list[CALLBACK_TYPE] = []
 
     @property
     def language(self) -> str:
@@ -197,6 +201,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             )
         )
         entry.async_on_unload(self.tracker.async_save_now)
+        entry.async_on_unload(self.cancel_override_timers)
 
     async def _async_on_time(self, _now: datetime) -> None:
         await self.async_request_refresh()
@@ -207,11 +212,17 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
 
     async def _async_watchdog(self, now: datetime) -> None:
         """Re-apply the current action when the Marstek drifted away from it."""
-        if self.data is None or self._last_apply is None:
+        if self._lock.locked() or self.data is None or self._last_apply is None:
             return
         if now - self._last_apply < timedelta(minutes=self.settings.watchdog_minutes):
             return
-        data = await self._async_execute(self.data)
+        current = self.data.current
+        if current is not None and current.end <= now:
+            # The plan is out of date (a replan failed); make a new one.
+            await self.async_request_refresh()
+            return
+        async with self._lock:
+            data = await self._async_execute_locked(self.data)
         if data != self.data:
             self.async_set_updated_data(data)
 
@@ -230,9 +241,21 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             o for o in self.overrides if o.end <= start or o.start >= end
         ] + [Override(start, end, action, power_w)]
         self.overrides.sort(key=lambda o: o.start)
+        # Replan exactly when the override starts and ends.
+        for moment in (start, end):
+            if moment > dt_util.now():
+                self._override_timers.append(
+                    async_track_point_in_time(self.hass, self._async_on_time, moment)
+                )
 
     def clear_overrides(self) -> None:
         self.overrides = []
+        self.cancel_override_timers()
+
+    def cancel_override_timers(self) -> None:
+        for cancel in self._override_timers:
+            cancel()
+        self._override_timers = []
 
     def active_override(self, now: datetime | None = None) -> Override | None:
         now = now or dt_util.now()
@@ -290,45 +313,90 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             )
         )
 
+    def _planned_status(self, data: TraderData) -> str:
+        """Status without a previous write error."""
+        if data.current is not None:
+            return data.current.action
+        return STATUS_OFF if data.status == STATUS_OFF else STATUS_WAITING
+
     def _marstek_action(self, data: TraderData) -> tuple[str, int]:
         """What to tell the Marstek for the planned action."""
-        if data.current is None:
+        current = data.current
+        if current is None:
             # Off or no plan: let the Marstek follow the house by itself.
             return ACTION_SELF, 0
-        if data.status == ACTION_DISCHARGE and not self.settings.allow_grid_export:
+        action = current.action
+        if (
+            action == ACTION_DISCHARGE
+            and not current.forced
+            and not self.settings.allow_grid_export
+        ):
             # Without export, self-consumption follows the real house load,
             # which a fixed discharge power cannot.
+            action = ACTION_SELF
+        if action == ACTION_SELF and self._below_reserve(current):
+            # The Marstek does not know the reserve: stop it from discharging.
+            return ACTION_HOLD, 0
+        if action == ACTION_SELF:
             return ACTION_SELF, 0
-        return data.status, data.power_w
+        return action, current.power_w
+
+    def _below_reserve(self, current: PlannedSlot) -> bool:
+        """Battery at the reserve while the house needs power from the battery."""
+        soc = self.inputs.soc()
+        if soc is None or soc > self.settings.min_soc:
+            return False
+        grid = self.tracker.grid_power()
+        if grid is not None:
+            return grid >= 0
+        return current.solar_kwh <= current.load_kwh
 
     async def _async_execute(self, data: TraderData) -> TraderData:
         async with self._lock:
-            action, power_w = self._marstek_action(data)
-            dry_run = self.settings.dry_run
-            if data.status == STATUS_OFF and self._released:
-                writes = []
+            return await self._async_execute_locked(data)
+
+    async def _async_execute_locked(self, data: TraderData) -> TraderData:
+        if data.status == STATUS_ERROR:
+            data = replace(data, status=self._planned_status(data), message=None)
+        action, power_w = self._marstek_action(data)
+        dry_run = self.settings.dry_run
+        if data.status == STATUS_OFF and self._released:
+            writes = []
+        else:
+            writes = self.controller.pending_writes(action, power_w)
+        descriptions = [w.description for w in writes]
+        if writes and not dry_run:
+            try:
+                await self.controller.async_write(writes)
+            except HomeAssistantError as err:
+                self.last_error = f"{dt_util.now():%H:%M} {err}"
+                _LOGGER.error("Writing to the Marstek failed: %s", err)
+                data = replace(data, status=STATUS_ERROR, message=str(err))
             else:
-                writes = self.controller.pending_writes(action, power_w)
-            descriptions = [w.description for w in writes]
-            if writes and not dry_run:
-                try:
-                    await self.controller.async_write(writes)
-                except HomeAssistantError as err:
-                    self.last_error = f"{dt_util.now():%H:%M} {err}"
-                    _LOGGER.error("Writing to the Marstek failed: %s", err)
-                    data = replace(data, status=STATUS_ERROR, message=str(err))
-                else:
-                    self.last_error = None
-            if not dry_run and data.status != STATUS_ERROR:
-                self._released = data.status == STATUS_OFF
-            self._last_apply = dt_util.now()
-            data = replace(
-                data,
-                marstek_action=action if data.status != STATUS_OFF else None,
-                writes=descriptions,
-            )
-            self._log_decision(data, dry_run)
-            return data
+                self.last_error = None
+        if not dry_run and data.status != STATUS_ERROR:
+            self._released = data.status == STATUS_OFF
+        self._last_apply = dt_util.now()
+        data = replace(
+            data,
+            marstek_action=action if data.status != STATUS_OFF else None,
+            writes=descriptions,
+        )
+        self._log_decision(data, dry_run)
+        return data
+
+    async def async_release(self) -> None:
+        """Hand control back to the Marstek (self-consumption), e.g. on unload."""
+        async with self._lock:
+            writes = self.controller.pending_writes(ACTION_SELF, 0)
+            if not writes:
+                return
+            try:
+                await self.controller.async_write(writes)
+            except HomeAssistantError as err:
+                _LOGGER.warning(
+                    "Could not return the Marstek to self-consumption: %s", err
+                )
 
     def _log_decision(self, data: TraderData, dry_run: bool) -> None:
         key = (data.status, data.power_w, dry_run)

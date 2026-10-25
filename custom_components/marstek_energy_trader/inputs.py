@@ -108,8 +108,13 @@ def read_price_sensor(hass: HomeAssistant, entity_id: str) -> list[Interval]:
     except (TimelineError, KeyError, TypeError, ValueError) as err:
         raise InputError(f"Cannot read prices from {entity_id}: {err}") from err
     unit = str(state.attributes.get(ATTR_UNIT_OF_MEASUREMENT, "")).lower()
+    divisor = 1
     if "ct" in unit or "cent" in unit:
-        intervals = [Interval(i.start, i.end, i.value / 100) for i in intervals]
+        divisor = 100
+    if "mwh" in unit:
+        divisor *= 1000
+    if divisor != 1:
+        intervals = [Interval(i.start, i.end, i.value / divisor) for i in intervals]
     return intervals
 
 
@@ -155,12 +160,16 @@ class TraderInputs:
             return None
         return buy, self.sell_price(now, buy)
 
-    def battery(self, settings: PlanSettings) -> Battery:
-        soc_state = self.hass.states.get(self.marstek.entity_ids[KEY_SOC])
+    def soc(self) -> float | None:
+        """Battery level of the Marstek in %."""
+        state = self.hass.states.get(self.marstek.entity_ids[KEY_SOC])
         try:
-            soc = float(soc_state.state) if soc_state else None
+            return float(state.state) if state else None
         except ValueError:
-            soc = None
+            return None
+
+    def battery(self, settings: PlanSettings) -> Battery:
+        soc = self.soc()
         if soc is None:
             raise InputError("The Marstek battery level (SOC) is not available")
         capacity = self.options.get(CONF_CAPACITY) or self._capacity_from_sensor()

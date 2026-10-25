@@ -117,5 +117,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: TraderConfigEntry) -> bo
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: TraderConfigEntry) -> bool:
-    """Unload a config entry."""
+    """Unload a config entry; the Marstek goes back to self-consumption."""
+    coordinator = entry.runtime_data
+    if not coordinator.settings.dry_run:
+        await coordinator.async_release()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -90,7 +90,7 @@ Strategieën:
 
 ### Diensten
 
-- `marstek_energy_trader.set_override`: `action`, optioneel `start`, `end` of `hours`, en `power_w`. Handig in automatiseringen, bijvoorbeeld "laad morgen 02:00–05:00 de auto en houd de batterij vast".
+- `marstek_energy_trader.set_override`: `action`, optioneel `start`, `end` of `hours`, en `power_w`. Een handmatige ontlading gebruikt het gekozen vermogen, ook als dat terugleveren betekent. Handig in automatiseringen, bijvoorbeeld "laad morgen 02:00–05:00 de auto en houd de batterij vast".
 - `marstek_energy_trader.clear_override`: alle handmatige acties wissen.
 - `marstek_energy_trader.replan`: opnieuw plannen.
 
@@ -141,6 +141,10 @@ In [`examples/`](examples/) (apexcharts-card nodig):
 | Ontladen (niet terugleveren) | user work mode *zelfverbruik* (volgt je echte verbruik) |
 | Vasthouden | RS485 aan → force mode *standby* |
 | Zelfverbruik / Uit / geen gegevens | user work mode *zelfverbruik*, RS485 uit |
+
+De Marstek kent de reserve van de planner niet. Staat hij in zelfverbruik op of onder de reserve terwijl het huis stroom van het net haalt, dan zet de integratie hem op *standby*, zodat de reserve blijft staan.
+
+Bij **proefdraaien aanzetten**, de modus **Uit** en het **verwijderen of herladen** van de integratie gaat de Marstek terug naar zelfverbruik, zodat hij nooit in een geforceerde modus blijft hangen.
 
 Een **watchdog** (standaard elke 5 minuten) controleert of de Marstek nog doet wat hij moet doen en schrijft opnieuw als dat niet zo is. Gebruikers van de Modbus-integratie melden dat de RS485-modus soms vanzelf terugvalt. Als er geen prijzen zijn, valt de integratie terug op zelfverbruik.
 

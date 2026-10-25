@@ -159,7 +159,15 @@ class _Grid:
     def index(self, soc_kwh: float) -> int:
         return max(0, min(SOC_STEPS, round(soc_kwh / self.step)))
 
-    def options(self, slot: Slot, i: int, actions: tuple[str, ...]) -> list[_Option]:
+    def options(
+        self,
+        slot: Slot,
+        i: int,
+        actions: tuple[str, ...],
+        allow_export: bool | None = None,
+    ) -> list[_Option]:
+        if allow_export is None:
+            allow_export = self.strategy.allow_grid_export
         options: list[_Option] = []
         step, eta, hours = self.step, self.eta, slot.hours
         room = max(0, self.high - i)
@@ -182,7 +190,7 @@ class _Grid:
                 most = int(
                     self.battery.max_discharge_w / 1000 * hours / eta / step + EPSILON
                 )
-                if not self.strategy.allow_grid_export:
+                if not allow_export:
                     most = min(most, int(max(slot.net_kwh, 0) / eta / step + EPSILON))
                 options.extend(
                     _Option(ACTION_DISCHARGE, i - moves, -moves * step * eta)
@@ -209,7 +217,8 @@ def _forced_options(
 ) -> tuple[list[_Option], tuple[str, ...]]:
     """Options for a slot with a manual override: only the chosen action."""
     action = slot.forced_action
-    options = grid.options(slot, i, (action,))
+    # A manual discharge runs at the chosen power, also when that means export.
+    options = grid.options(slot, i, (action,), allow_export=True)
     if action in (ACTION_CHARGE, ACTION_DISCHARGE) and options:
         wanted = slot.forced_power_w or (
             grid.battery.max_charge_w
