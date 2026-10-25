@@ -268,6 +268,12 @@ class TraderConfigFlow(_Steps, ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Choose the Marstek battery."""
+        if user_input is None and CONF_MARSTEK_ENTRY not in self._data:
+            entries = self.hass.config_entries.async_entries(MARSTEK_DOMAIN)
+            if not entries:
+                return self.async_abort(reason="no_marstek")
+            # The frontend needs a value for a required config entry selector.
+            self._data[CONF_MARSTEK_ENTRY] = entries[0].entry_id
         return await self._battery_step("user", user_input)
 
     def _finish(self) -> ConfigFlowResult:

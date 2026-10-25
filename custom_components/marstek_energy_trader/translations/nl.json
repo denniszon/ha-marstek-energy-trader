@@ -1,7 +1,8 @@
 {
   "config": {
     "abort": {
-      "single_instance_allowed": "Marstek Energy Trader is al ingesteld."
+      "single_instance_allowed": "Marstek Energy Trader is al ingesteld.",
+      "no_marstek": "Er is geen Marstek Venus Modbus-integratie gevonden. Stel eerst de Marstek Venus Modbus-integratie voor je batterij in."
     },
     "error": {
       "marstek_missing": "Deze Marstek-entiteiten zijn niet gevonden: {entities}. Controleer of de Marstek Venus Modbus-integratie voor deze batterij is ingesteld.",

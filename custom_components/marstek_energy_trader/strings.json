@@ -1,7 +1,8 @@
 {
   "config": {
     "abort": {
-      "single_instance_allowed": "Marstek Energy Trader is already set up."
+      "single_instance_allowed": "Marstek Energy Trader is already set up.",
+      "no_marstek": "No Marstek Venus Modbus integration was found. Set up the Marstek Venus Modbus integration for your battery first."
     },
     "error": {
       "marstek_missing": "These Marstek entities were not found: {entities}. Check that the Marstek Venus Modbus integration is set up for this battery.",

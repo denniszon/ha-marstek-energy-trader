@@ -17,6 +17,9 @@ async def test_full_flow(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["step_id"] == "user"
+    # The frontend cannot show a required config entry selector without a value.
+    marker = next(k for k in result["data_schema"].schema if k == "marstek_entry")
+    assert marker.description == {"suggested_value": marstek.entry_id}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"marstek_entry": marstek.entry_id}
@@ -36,6 +39,14 @@ async def test_full_flow(hass: HomeAssistant) -> None:
     assert result["options"]["price_sensor"] == PRICE_SENSOR
     assert result["options"]["round_trip_efficiency"] == 85
     assert result["options"]["base_load"] == 400
+
+
+async def test_no_marstek(hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "no_marstek"
 
 
 async def test_disabled_marstek_entities(hass: HomeAssistant) -> None:
