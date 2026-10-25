@@ -36,7 +36,9 @@ series:
       - value: 0
         color: "#1a9850"
     data_generator: |
-      return (entity.attributes.plan || []).map((s) => [new Date(s.start).getTime(), s.power_w]);
+      const plan = entity.attributes.plan || [];
+      const len = plan.length > 1 ? new Date(plan[1].end) - new Date(plan[1].start) : 3600000;
+      return plan.map((s) => [new Date(s.end).getTime() - len / 2, s.power_w]);
   - entity: sensor.marstek_energy_trader_plan
     name: Zon (verwacht)
     type: area
@@ -46,9 +48,11 @@ series:
     unit: W
     float_precision: 0
     data_generator: |
-      return (entity.attributes.plan || []).map((s) => {
+      const plan = entity.attributes.plan || [];
+      const len = plan.length > 1 ? new Date(plan[1].end) - new Date(plan[1].start) : 3600000;
+      return plan.map((s) => {
         const hours = (new Date(s.end) - new Date(s.start)) / 3600000;
-        return [new Date(s.start).getTime(), Math.round(s.solar_kwh / hours * 1000)];
+        return [new Date(s.end).getTime() - len, Math.round(s.solar_kwh / hours * 1000)];
       });
   - entity: sensor.marstek_energy_trader_plan
     name: Verbruik (verwacht)
@@ -59,9 +63,11 @@ series:
     unit: W
     float_precision: 0
     data_generator: |
-      return (entity.attributes.plan || []).map((s) => {
+      const plan = entity.attributes.plan || [];
+      const len = plan.length > 1 ? new Date(plan[1].end) - new Date(plan[1].start) : 3600000;
+      return plan.map((s) => {
         const hours = (new Date(s.end) - new Date(s.start)) / 3600000;
-        return [new Date(s.start).getTime(), Math.round(s.load_kwh / hours * 1000)];
+        return [new Date(s.end).getTime() - len, Math.round(s.load_kwh / hours * 1000)];
       });
 experimental:
   color_threshold: true
