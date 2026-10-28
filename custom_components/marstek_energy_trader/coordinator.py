@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import (
     async_track_point_in_time,
@@ -32,6 +32,7 @@ from .const import (
     DECISION_LOG_SIZE,
     DOMAIN,
     EVENT_ACTION,
+    KEY_SOC,
     MODE_OFF,
     MODE_SOLAR_PRICE,
     SAVINGS_INTERVAL,
@@ -51,6 +52,16 @@ from .tracker import SavingsTracker
 _LOGGER = logging.getLogger(__name__)
 
 type TraderConfigEntry = ConfigEntry[TraderCoordinator]
+
+
+def _is_number(state: State | None) -> bool:
+    if state is None:
+        return False
+    try:
+        float(state.state)
+    except ValueError:
+        return False
+    return True
 
 
 @dataclass
@@ -134,7 +145,8 @@ class TraderData:
 
 
 class TraderCoordinator(DataUpdateCoordinator[TraderData]):
-    """Replans every slot, on price/forecast changes and when settings change."""
+    """Replans every slot, on price/forecast changes, when settings change and when
+    the battery level becomes available again."""
 
     config_entry: TraderConfigEntry
 
@@ -200,6 +212,13 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 self.hass, [e for e in watched if e], self._async_on_input_change
             )
         )
+        entry.async_on_unload(
+            async_track_state_change_event(
+                self.hass,
+                self.inputs.marstek.entity_ids[KEY_SOC],
+                self._async_on_soc_change,
+            )
+        )
         entry.async_on_unload(self.tracker.async_save_now)
         entry.async_on_unload(self.cancel_override_timers)
 
@@ -209,6 +228,16 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     @callback
     def _async_on_input_change(self, _event: Event) -> None:
         self.hass.async_create_task(self.async_request_refresh())
+
+    @callback
+    def _async_on_soc_change(self, event: Event) -> None:
+        """Replan when the trader waits and the battery level comes back."""
+        if self.data is None or self.data.status != STATUS_WAITING:
+            return
+        if _is_number(event.data["new_state"]) and not _is_number(
+            event.data["old_state"]
+        ):
+            self.hass.async_create_task(self.async_request_refresh())
 
     async def _async_watchdog(self, now: datetime) -> None:
         """Re-apply the current action when the Marstek drifted away from it."""

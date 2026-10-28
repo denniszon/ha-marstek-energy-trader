@@ -238,6 +238,25 @@ async def test_waiting_without_prices(
     assert "no price" in status.attributes["reason"]
 
 
+async def test_replans_when_battery_level_returns(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(NIGHT)
+    marstek = add_marstek(hass)
+    hass.states.async_set(marstek_entity_id("battery_soc"), "unavailable")
+    set_prices(hass, datetime.fromisoformat(NIGHT))
+    await setup_trader(hass, marstek)
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.state == "waiting"
+    assert "SOC" in status.attributes["reason"]
+
+    # No clock tick: the new battery level alone triggers a plan.
+    hass.states.async_set(marstek_entity_id("battery_soc"), "20")
+    await hass.async_block_till_done()
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "charge"
+
+
 async def test_setup_retries_when_entities_are_disabled(hass: HomeAssistant) -> None:
     marstek = add_marstek(hass, disabled=("force_mode",))
     entry = await setup_trader(hass, marstek)
