@@ -94,9 +94,9 @@ BATTERY_SCHEMA = probatio.Schema(
             selector.ConfigEntrySelectorConfig(integration=MARSTEK_DOMAIN)
         ),
         probatio.Required(
-            CONF_BATTERY_POWER_SIGN, default=SIGN_POSITIVE_DISCHARGE
+            CONF_BATTERY_POWER_SIGN, default=SIGN_POSITIVE_CHARGE
         ): _choice(
-            CONF_BATTERY_POWER_SIGN, [SIGN_POSITIVE_DISCHARGE, SIGN_POSITIVE_CHARGE]
+            CONF_BATTERY_POWER_SIGN, [SIGN_POSITIVE_CHARGE, SIGN_POSITIVE_DISCHARGE]
         ),
         probatio.Optional(CONF_CAPACITY): _number(0.5, 100, 0.01, "kWh"),
         probatio.Required(CONF_EFFICIENCY, default=DEFAULT_EFFICIENCY): _number(

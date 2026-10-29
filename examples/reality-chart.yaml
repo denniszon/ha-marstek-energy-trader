@@ -41,8 +41,7 @@ series:
       func: avg
       duration: 5min
     # The trader shows charging as positive. If your Marstek shows charging as
-    # positive too, remove this line.
-    transform: "return -x;"
+    # negative, add: transform: "return -x;"
   - entity: sensor.marstek_energy_trader_target_power
     name: Vermogen (gepland)
     yaxis_id: power

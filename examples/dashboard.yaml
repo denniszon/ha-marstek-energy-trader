@@ -362,7 +362,7 @@ views:
       group_by:
         func: avg
         duration: 5min
-      transform: return -x;
+      # If your Marstek shows charging as negative, add: transform: return -x;
     - entity: sensor.marstek_energy_trader_target_power
       name: Vermogen (gepland)
       yaxis_id: power
