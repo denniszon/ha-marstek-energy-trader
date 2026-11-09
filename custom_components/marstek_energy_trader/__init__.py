@@ -109,6 +109,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: TraderConfigEntry) -> bo
 
     coordinator = TraderCoordinator(hass, entry, marstek)
     entry.runtime_data = coordinator
+    # Load the stored totals before the sensors exist. Otherwise they first
+    # report 0, and Home Assistant counts the jump back as a meter reset that
+    # adds every kWh measured so far to today.
+    await coordinator.tracker.async_load()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Entities have restored their settings now, so the first plan uses them.
     await coordinator.async_start()

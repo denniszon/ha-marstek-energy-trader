@@ -182,8 +182,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         return describe(slot.reason, self.language, dt_util.get_default_time_zone())
 
     async def async_start(self) -> None:
-        """Load stored savings and start the timers and listeners."""
-        await self.tracker.async_load()
+        """Start the timers and listeners."""
         entry = self.config_entry
         entry.async_on_unload(
             async_track_time_change(

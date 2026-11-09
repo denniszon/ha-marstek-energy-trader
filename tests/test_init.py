@@ -1,9 +1,11 @@
 """The trader inside Home Assistant, with a fake Marstek battery."""
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
 from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
     async_capture_events,
     async_fire_time_changed,
 )
@@ -12,6 +14,7 @@ from custom_components.marstek_energy_trader.const import DOMAIN, EVENT_ACTION
 from custom_components.marstek_energy_trader.inputs import read_price_sensor
 from custom_components.marstek_energy_trader.marstek import Write
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
+from homeassistant.const import EVENT_STATE_CHANGED
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
@@ -21,6 +24,7 @@ from .common import (
     marstek_entity_id,
     set_prices,
     setup_trader,
+    trader_options,
 )
 
 NIGHT = "2026-10-26T03:10:00+01:00"
@@ -223,6 +227,37 @@ async def test_savings_are_measured(
     assert float(hass.states.get(f"sensor.{DOMAIN}_savings_total").state) == -0.14
     assert float(hass.states.get(f"sensor.{DOMAIN}_savings_today").state) == -0.14
     assert float(hass.states.get(f"sensor.{DOMAIN}_average_stored_price").state) == 0.14
+
+
+async def test_stored_totals_are_shown_from_the_start(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    hass_storage: dict[str, Any],
+) -> None:
+    """A restart must not report 0 first: HA would count it as a meter reset."""
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(NIGHT)
+    marstek = add_marstek(hass)
+    set_prices(hass, datetime.fromisoformat(NIGHT))
+    entry = MockConfigEntry(domain=DOMAIN, options=trader_options(marstek))
+    hass_storage[f"{DOMAIN}.{entry.entry_id}"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{entry.entry_id}",
+        "data": {"totals": {"grid_to_battery": 30.0, "battery_to_home": 28.0}},
+    }
+    changes = async_capture_events(hass, EVENT_STATE_CHANGED)
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    for key, total in (("grid_to_battery", 30.0), ("battery_to_home", 28.0)):
+        entity_id = f"sensor.{DOMAIN}_{key}"
+        states = [
+            float(e.data["new_state"].state)
+            for e in changes
+            if e.data["entity_id"] == entity_id
+        ]
+        assert states == [total]
 
 
 async def test_waiting_without_prices(
