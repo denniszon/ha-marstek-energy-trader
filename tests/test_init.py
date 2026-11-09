@@ -4,13 +4,22 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
+import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_capture_events,
     async_fire_time_changed,
 )
 
-from custom_components.marstek_energy_trader.const import DOMAIN, EVENT_ACTION
+from custom_components.marstek_energy_trader.const import (
+    CONF_FEED_IN_MODE,
+    CONF_FEED_IN_OFFSET,
+    CONF_FEED_IN_SENSOR,
+    DOMAIN,
+    EVENT_ACTION,
+    FEED_IN_OFFSET,
+    FEED_IN_SENSOR,
+)
 from custom_components.marstek_energy_trader.inputs import read_price_sensor
 from custom_components.marstek_energy_trader.marstek import Write
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
@@ -20,6 +29,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from .common import (
     GRID_SENSOR,
+    PRICE_SENSOR,
     add_marstek,
     marstek_entity_id,
     set_prices,
@@ -258,6 +268,36 @@ async def test_stored_totals_are_shown_from_the_start(
             if e.data["entity_id"] == entity_id
         ]
         assert states == [total]
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected_offset"), [(FEED_IN_SENSOR, 0), (FEED_IN_OFFSET, -0.13)]
+)
+async def test_migration_clears_stale_amount_for_feed_in_sensor(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mode: str,
+    expected_offset: float,
+) -> None:
+    """An amount left over from another mode must not change the feed-in price."""
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(NIGHT)
+    marstek = add_marstek(hass)
+    set_prices(hass, datetime.fromisoformat(NIGHT))
+    options = trader_options(marstek) | {
+        CONF_FEED_IN_MODE: mode,
+        CONF_FEED_IN_SENSOR: PRICE_SENSOR,
+        CONF_FEED_IN_OFFSET: -0.13,
+    }
+    entry = MockConfigEntry(domain=DOMAIN, options=options, version=1, minor_version=1)
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 2
+    assert entry.options[CONF_FEED_IN_OFFSET] == expected_offset
+    assert entry.options[CONF_FEED_IN_MODE] == mode
 
 
 async def test_waiting_without_prices(

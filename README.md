@@ -58,7 +58,7 @@ Updates verschijnen in HACS zodra er een nieuwe release is.
 | | Capaciteit | Leeg = wat de batterij doorgeeft. |
 | | Rendement | Laden + ontladen samen, standaard 85%. |
 | Prijzen | Prijssensor | Wat je per kWh betaalt, incl. belastingen (bijv. `sensor.anwb_energie_stroom_all_in`). |
-| | Terugleverprijs | Gelijk aan de prijs (saldering), aparte sensor, prijs ± bedrag of vast bedrag. |
+| | Terugleverprijs | Gelijk aan de prijs (saldering), aparte sensor (± bedrag), prijs ± bedrag of vast bedrag. Het bedrag komt bovenop de prijs of de aparte sensor; gebruik bij een all-in prijs een kale marktprijs-sensor voor de teruglevering. |
 | | Terugleverkosten | Gaat van elke terugleverprijs af. |
 | Meter, zon, verbruik | Netvermogen + teken | HomeWizard P1: positief bij afname. |
 | | Zonneverwachting | Forecast.Solar (kies de configuratie) of Solcast (sensoren *Forecast Today/Tomorrow*). |

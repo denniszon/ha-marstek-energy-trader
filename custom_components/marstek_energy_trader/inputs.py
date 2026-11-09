@@ -147,8 +147,14 @@ class TraderInputs:
         elif mode == FEED_IN_OFFSET:
             price = buy + self.options.get(CONF_FEED_IN_OFFSET, 0.0)
         elif mode == FEED_IN_SENSOR:
+            # The amount also applies here, so a bare market price sensor can
+            # be combined with a fixed bonus per kWh.
             found = value_at(self.feed_in_prices, start)
-            price = buy if found is None else found
+            price = (
+                buy
+                if found is None
+                else found + self.options.get(CONF_FEED_IN_OFFSET, 0.0)
+            )
         else:
             price = buy
         return price - self.options.get(CONF_FEED_IN_COST, 0.0)

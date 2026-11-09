@@ -40,7 +40,8 @@
         "data_description": {
           "price_sensor": "De prijs die je betaalt, inclusief belastingen, bijvoorbeeld sensor.anwb_energie_stroom_all_in.",
           "feed_in_mode": "Wat je krijgt voor energie die je aan het net levert.",
-          "feed_in_offset": "Alleen voor 'prijs plus bedrag'; gebruik een negatief bedrag voor een lagere terugleverprijs.",
+          "feed_in_sensor": "Alleen voor 'aparte prijssensor', bijvoorbeeld de marktprijs zonder belastingen.",
+          "feed_in_offset": "Komt bovenop de prijs ('prijs plus bedrag') of bovenop de sensor terugleverprijs ('aparte prijssensor'). Gebruik een negatief bedrag voor een lagere terugleverprijs.",
           "feed_in_cost": "Gaat van elke terugleverprijs af."
         }
       },
@@ -107,7 +108,8 @@
         "data_description": {
           "price_sensor": "De prijs die je betaalt, inclusief belastingen, bijvoorbeeld sensor.anwb_energie_stroom_all_in.",
           "feed_in_mode": "Wat je krijgt voor energie die je aan het net levert.",
-          "feed_in_offset": "Alleen voor 'prijs plus bedrag'; gebruik een negatief bedrag voor een lagere terugleverprijs.",
+          "feed_in_sensor": "Alleen voor 'aparte prijssensor', bijvoorbeeld de marktprijs zonder belastingen.",
+          "feed_in_offset": "Komt bovenop de prijs ('prijs plus bedrag') of bovenop de sensor terugleverprijs ('aparte prijssensor'). Gebruik een negatief bedrag voor een lagere terugleverprijs.",
           "feed_in_cost": "Gaat van elke terugleverprijs af."
         }
       },

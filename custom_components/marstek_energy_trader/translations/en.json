@@ -40,7 +40,8 @@
         "data_description": {
           "price_sensor": "The price you pay, including taxes, for example sensor.anwb_energie_stroom_all_in.",
           "feed_in_mode": "What you get for energy you send to the grid.",
-          "feed_in_offset": "Only for 'price plus amount'; use a negative amount for a lower feed-in price.",
+          "feed_in_sensor": "Only for 'separate price sensor', for example the market price without taxes.",
+          "feed_in_offset": "Added to the price ('price plus amount') or to the feed-in price sensor ('separate price sensor'). Use a negative amount for a lower feed-in price.",
           "feed_in_cost": "Subtracted from every feed-in price, for example 'terugleverkosten'."
         }
       },
@@ -107,7 +108,8 @@
         "data_description": {
           "price_sensor": "The price you pay, including taxes, for example sensor.anwb_energie_stroom_all_in.",
           "feed_in_mode": "What you get for energy you send to the grid.",
-          "feed_in_offset": "Only for 'price plus amount'; use a negative amount for a lower feed-in price.",
+          "feed_in_sensor": "Only for 'separate price sensor', for example the market price without taxes.",
+          "feed_in_offset": "Added to the price ('price plus amount') or to the feed-in price sensor ('separate price sensor'). Use a negative amount for a lower feed-in price.",
           "feed_in_cost": "Subtracted from every feed-in price, for example 'terugleverkosten'."
         }
       },

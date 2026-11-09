@@ -255,6 +255,8 @@ class TraderConfigFlow(_Steps, ConfigFlow, domain=DOMAIN):
     """Set up Marstek Energy Trader."""
 
     VERSION = 1
+    # 1.2: the feed-in amount also applies to a separate feed-in sensor.
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}

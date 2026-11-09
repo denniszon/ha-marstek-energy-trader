@@ -6,7 +6,7 @@ from datetime import timedelta
 
 import probatio
 
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
@@ -14,7 +14,14 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
-from .const import ACTIONS, CONF_MARSTEK_ENTRY, DOMAIN
+from .const import (
+    ACTIONS,
+    CONF_FEED_IN_MODE,
+    CONF_FEED_IN_OFFSET,
+    CONF_MARSTEK_ENTRY,
+    DOMAIN,
+    FEED_IN_SENSOR,
+)
 from .coordinator import TraderConfigEntry, TraderCoordinator
 from .marstek import resolve_entities
 
@@ -91,6 +98,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
     hass.services.async_register(DOMAIN, "clear_override", clear_override)
     hass.services.async_register(DOMAIN, "replan", replan)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Bring older config entries up to date."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        # The feed-in amount used to be ignored with a separate feed-in sensor
+        # and now applies there too. Keep the old feed-in price for entries
+        # that still have an amount stored from an earlier mode.
+        options = dict(entry.options)
+        if options.get(CONF_FEED_IN_MODE) == FEED_IN_SENSOR:
+            options[CONF_FEED_IN_OFFSET] = 0
+        hass.config_entries.async_update_entry(entry, options=options, minor_version=2)
     return True
 
 
