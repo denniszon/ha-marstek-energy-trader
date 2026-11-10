@@ -10,7 +10,7 @@ Home Assistant-integratie die een **Marstek Venus E** automatisch laat laden en 
 - **Plant vooruit**: voor elk uur (of kwartier) waarvoor een prijs bekend is, kiest de integratie een actie:
   - 🔋 **Laden** uit het net (goedkoop of negatieve prijs)
   - ⚡ **Ontladen** (duur; naar het huis, of ook naar het net als je dat toestaat)
-  - ⏸️ **Vasthouden**: energie bewaren voor een duurder moment
+  - ⏸️ **Vasthouden**: energie bewaren voor een duurder moment; zonne-overschot wordt wel opgeslagen (met *Max Discharge Power*, zie vereisten)
   - 🏠 **Zelfverbruik**: de Marstek volgt zelf je verbruik en slaat zonne-overschot op
 - **Rekent alles door**: rendementsverlies, minimale winst per kWh, reserve, laad/ontlaadvermogen, verwachte zon en verbruik. De planner zoekt de goedkoopste combinatie over de hele horizon (dynamisch programmeren), dus "goedkope nacht → dure avond" ook als er tussendoor nog goedkope uren zijn.
 - **Legt uit waarom**: elke actie heeft een reden, bijvoorbeeld *"Laden voor €0.14: de energie wordt om 18:00 gebruikt bij €0.42"*. Die staat in de status-sensor, de grafiek, het logboek en de planning.
@@ -32,6 +32,7 @@ Home Assistant-integratie die een **Marstek Venus E** automatisch laat laden en 
 - Home Assistant **2026.9** of nieuwer.
 - [Marstek Venus Modbus](https://github.com/ViperRNMC/marstek_venus_modbus) met je Venus E. Zet in die integratie deze entiteiten **aan** (ze staan standaard uit): *Force Mode*, *Set Charge Power*, *Set Discharge Power* en *RS485 Control Mode*. Ook nodig: *User Work Mode* en *Battery SOC*.
   Voor de besparing: *Total Charging Energy*, *Total Discharging Energy* en *Battery Power*.
+  Aanrader: *Max Discharge Power*. Dan laadt de batterij tijdens *Vasthouden* nog wel van zonne-overschot (ook als de zonneverwachting dat niet zag), in plaats van stil te staan. De integratie zet die limiet buiten *Vasthouden* op het ingestelde *Maximaal ontlaadvermogen* van de trader, maar nooit hoger dan de waarde die je zelf op de Marstek had staan (bijvoorbeeld een wettelijke 800 W). Die waarde onthoudt hij ook na een herstart. Staat de limiet bij de eerste start al op 0, dan kent hij jouw waarde niet: zet *Maximaal ontlaadvermogen* van de trader dan zelf op de juiste grens. Zet je *Max Discharge Power* later weer uit, controleer dan eerst dat hij niet op 0 staat: de trader stuurt hem daarna niet meer aan.
 - Voor zelfverbruik moet de Marstek zelf een meter hebben (CT of P1 in de Marstek-app), want dan regelt de Marstek de nul-op-de-meter.
 - Een **prijssensor met de prijzen van de komende uren als attribuut**. Getest formaat: `raw_today`/`raw_tomorrow` (bijvoorbeeld [ANWB Energie](https://github.com/denniszon/ha-anwb-energie) of Nord Pool). Ook herkend: `prices_today`/`prices_tomorrow` (ENTSO-e) en `prices`.
 - Optioneel:
@@ -98,7 +99,7 @@ Strategieën:
 
 | Entiteit | Inhoud |
 |---|---|
-| `sensor.marstek_energy_trader_status` | Huidige actie. Attributen: `reason`, `power_w`, `marstek_action` (wat de Marstek echt doet), `writes`, `decisions` (laatste 20 beslissingen), `last_error`. |
+| `sensor.marstek_energy_trader_status` | Huidige actie. Attributen: `reason`, `power_w`, `marstek_action` (wat de Marstek echt doet; `standby` bij vasthouden zonder zonne-overschot op te slaan), `writes`, `decisions` (laatste 20 beslissingen), `last_error`. |
 | `sensor.marstek_energy_trader_plan` | Verwachte besparing van de planning (€). Attribuut `plan`: per tijdvak `start`, `end`, `action`, `power_w` (+ laden, − ontladen), `soc_start`/`soc_end`, `buy`/`sell`, `solar_kwh`, `load_kwh`, `grid_kwh`, `savings`, `reason`. |
 | `sensor.marstek_energy_trader_next_change` | Wanneer de actie verandert, en naar wat. |
 | `sensor.marstek_energy_trader_target_power` / `planned_soc` | Gepland vermogen en batterijniveau nu (voor "werkelijk vs. gepland"). |
@@ -139,10 +140,13 @@ In [`examples/`](examples/) (apexcharts-card nodig):
 | Laden | RS485 aan → laadvermogen → force mode *charge* |
 | Ontladen (terugleveren toegestaan) | RS485 aan → ontlaadvermogen → force mode *discharge* |
 | Ontladen (niet terugleveren) | user work mode *zelfverbruik* (volgt je echte verbruik) |
-| Vasthouden | RS485 aan → force mode *standby* |
+| Vasthouden (met *Max Discharge Power*) | max discharge power 0 → user work mode *zelfverbruik*, RS485 uit: laadt van zonne-overschot, ontlaadt niet |
+| Vasthouden (zonder *Max Discharge Power*, of als terugleveren meer oplevert dan opslaan) | RS485 aan → force mode *standby* |
 | Zelfverbruik / Uit / geen gegevens | user work mode *zelfverbruik*, RS485 uit |
 
-De Marstek kent de reserve van de planner niet. Staat hij in zelfverbruik op of onder de reserve terwijl het huis stroom van het net haalt, dan zet de integratie hem op *standby*, zodat de reserve blijft staan.
+Met *Max Discharge Power* zet elke actie behalve *Vasthouden* die limiet eerst terug op het *Maximaal ontlaadvermogen* van de trader.
+
+De Marstek kent de reserve van de planner niet. Staat hij in zelfverbruik op of onder de reserve terwijl het huis stroom van het net haalt, dan zet de integratie hem op *Vasthouden*, zodat de reserve blijft staan. Met *Max Discharge Power* gebeurt dat op of onder de reserve altijd, want *Vasthouden* slaat zonne-overschot dan toch op.
 
 Bij **proefdraaien aanzetten**, de modus **Uit** en het **verwijderen of herladen** van de integratie gaat de Marstek terug naar zelfverbruik, zodat hij nooit in een geforceerde modus blijft hangen.
 

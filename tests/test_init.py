@@ -398,6 +398,32 @@ async def test_reserve_stops_self_consumption(
     assert calls[-1] == (marstek_entity_id("force_mode"), "standby")
 
 
+async def test_hold_with_discharge_limit_stores_solar(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(EVENING)
+    marstek = add_marstek(hass, discharge_limit=True)
+    set_prices(hass, datetime.fromisoformat(EVENING))
+    entry = await setup_trader(hass, marstek)
+    calls = _record_writes(entry)
+    # Battery at the reserve: hold, which blocks discharging but stores a surplus.
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.attributes["marstek_action"] == "hold"
+    assert calls == [
+        (marstek_entity_id("max_discharge_power"), 0),
+        (marstek_entity_id("user_work_mode"), "anti_feed"),
+        (marstek_entity_id("rs485_control_mode"), False),
+    ]
+
+    hass.states.async_set(marstek_entity_id("max_discharge_power"), "0")
+    calls.clear()
+    await hass.config_entries.async_unload(entry.entry_id)
+    # Unloading sets the discharge limit back.
+    assert calls[0] == (marstek_entity_id("max_discharge_power"), 2500)
+
+
 async def test_price_units_are_converted(hass: HomeAssistant) -> None:
     for unit, value in (("ct/kWh", 14), ("€/MWh", 140), ("EUR/kWh", 0.14)):
         hass.states.async_set(

@@ -18,6 +18,7 @@ from homeassistant.helpers.event import (
     async_track_time_change,
     async_track_time_interval,
 )
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
@@ -33,6 +34,8 @@ from .const import (
     DOMAIN,
     EVENT_ACTION,
     KEY_SOC,
+    MARSTEK_MAX_POWER,
+    MARSTEK_STANDBY,
     MODE_OFF,
     MODE_SOLAR_PRICE,
     SAVINGS_INTERVAL,
@@ -162,7 +165,9 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         self.options = {**entry.data, **entry.options}
         self.settings = TraderSettings()
         self.inputs = TraderInputs(hass, self.options, marstek)
-        self.controller = MarstekController(hass, marstek)
+        self.controller = MarstekController(
+            hass, marstek, Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.marstek")
+        )
         self.tracker = SavingsTracker(hass, entry.entry_id, self.options, self.inputs)
         self.overrides: list[Override] = []
         self.decisions: deque[Decision] = deque(maxlen=DECISION_LOG_SIZE)
@@ -219,6 +224,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             )
         )
         entry.async_on_unload(self.tracker.async_save_now)
+        entry.async_on_unload(self.controller.async_save_now)
         entry.async_on_unload(self.cancel_override_timers)
 
     async def _async_on_time(self, _now: datetime) -> None:
@@ -329,6 +335,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 mode=settings.mode,
                 min_profit=settings.min_profit,
                 allow_grid_export=settings.allow_grid_export,
+                hold_stores_solar=self.controller.entities.hold_stores_solar,
             ),
         )
         current = plan.slots[0]
@@ -367,6 +374,9 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             return ACTION_HOLD, 0
         if action == ACTION_SELF:
             return ACTION_SELF, 0
+        if action == ACTION_HOLD and current.standby:
+            # Exporting the solar surplus is worth more than storing it.
+            return MARSTEK_STANDBY, 0
         return action, current.power_w
 
     def _below_reserve(self, current: PlannedSlot) -> bool:
@@ -374,10 +384,17 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         soc = self.inputs.soc()
         if soc is None or soc > self.settings.min_soc:
             return False
+        if self.controller.entities.hold_stores_solar:
+            # Hold still stores a solar surplus, so the grid does not matter.
+            return True
         grid = self.tracker.grid_power()
         if grid is not None:
             return grid >= 0
         return current.solar_kwh <= current.load_kwh
+
+    def _discharge_limit(self) -> int:
+        """Max Discharge Power of the Marstek outside hold."""
+        return marstek_power(min(self.settings.max_discharge_power, MARSTEK_MAX_POWER))
 
     async def _async_execute(self, data: TraderData) -> TraderData:
         async with self._lock:
@@ -391,7 +408,9 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         if data.status == STATUS_OFF and self._released:
             writes = []
         else:
-            writes = self.controller.pending_writes(action, power_w)
+            writes = self.controller.pending_writes(
+                action, power_w, self._discharge_limit()
+            )
         descriptions = [w.description for w in writes]
         if writes and not dry_run:
             try:
@@ -416,7 +435,9 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     async def async_release(self) -> None:
         """Hand control back to the Marstek (self-consumption), e.g. on unload."""
         async with self._lock:
-            writes = self.controller.pending_writes(ACTION_SELF, 0)
+            writes = self.controller.pending_writes(
+                ACTION_SELF, 0, self._discharge_limit()
+            )
             if not writes:
                 return
             try:

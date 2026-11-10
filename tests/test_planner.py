@@ -176,3 +176,31 @@ def test_dst_day_with_25_hours() -> None:
 def test_empty_input() -> None:
     plan = make_plan([], _battery(), Strategy("price"))
     assert plan.slots == []
+
+
+def test_hold_stores_solar_surplus() -> None:
+    # Sunny midday with a low feed-in price; grid charging does not pay.
+    prices = [0.30] * 4 + [0.38] * 2
+    solar = [1.5] * 4 + [0.0] * 2
+    slots = _slots(prices, solar=solar, sell=0.05)
+    # Charge power below the surplus, so a fixed charge cannot store more.
+    battery = _battery(soc=1.0, max_charge_w=1000)
+    stores = make_plan(slots, battery, Strategy("price", 0.04, hold_stores_solar=True))
+    assert _actions(stores)[:4] == ["hold"] * 4
+    assert stores.slots[0].battery_kwh > 0
+    assert not stores.slots[0].standby
+    assert stores.slots[0].reason.code == "hold_store_solar"
+
+    # Without it, an expected surplus needs a fixed charge power.
+    fixed = make_plan(slots, battery, Strategy("price", 0.04))
+    assert fixed.slots[0].action == "charge"
+    assert fixed.slots[0].reason.code == "charge_solar"
+
+
+def test_hold_exports_when_that_pays_more() -> None:
+    # Net metering at a high price now; the energy is worth less later.
+    slots = _slots([0.40, 0.30], solar=[1.5, 0.0])
+    plan = make_plan(slots, _battery(), Strategy("price", 0.04, hold_stores_solar=True))
+    assert plan.slots[0].action == "hold"
+    assert plan.slots[0].standby
+    assert plan.slots[0].battery_kwh == 0

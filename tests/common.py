@@ -37,6 +37,8 @@ MARSTEK_ENTITIES = {
     "battery_total_energy": ("sensor", "5.12"),
     "total_charging_energy": ("sensor", "100.0"),
     "total_discharging_energy": ("sensor", "80.0"),
+    # Only with add_marstek(discharge_limit=True).
+    "max_discharge_power": ("number", "2500"),
 }
 
 
@@ -45,12 +47,17 @@ def marstek_entity_id(key: str) -> str:
 
 
 def add_marstek(
-    hass: HomeAssistant, disabled: tuple[str, ...] = (), skip: tuple[str, ...] = ()
+    hass: HomeAssistant,
+    disabled: tuple[str, ...] = (),
+    skip: tuple[str, ...] = (),
+    discharge_limit: bool = False,
 ) -> MockConfigEntry:
     """Register the Marstek entities like the marstek_modbus integration does."""
     entry = MockConfigEntry(domain="marstek_modbus", title="Marstek")
     entry.add_to_hass(hass)
     registry = er.async_get(hass)
+    if not discharge_limit:
+        skip = (*skip, "max_discharge_power")
     for key, (platform, state) in MARSTEK_ENTITIES.items():
         if key in skip:
             continue

@@ -24,6 +24,9 @@ TEXTS = {
         "hold_for_later": "Holding energy for {later_start} ({later_price}); "
         "now {price}",
         "hold": "Waiting: the price ({price}) is not worth using the battery for",
+        "hold_store_solar": "Holding energy for {later_start} ({later_price}); "
+        "storing {kwh} kWh of solar surplus",
+        "hold_store_solar_short": "Not discharging; storing {kwh} kWh of solar surplus",
         "self_cover": "Covering the house from the battery (price {price})",
         "self_store_solar": "Storing {kwh} kWh of solar surplus",
         "self_full": "Battery full, the solar surplus goes to the grid",
@@ -47,6 +50,9 @@ TEXTS = {
         "hold_for_later": "Energie bewaren voor {later_start} ({later_price}); "
         "nu {price}",
         "hold": "Wachten: de prijs ({price}) is het gebruik van de batterij niet waard",
+        "hold_store_solar": "Energie bewaren voor {later_start} ({later_price}); "
+        "{kwh} kWh zonne-overschot opslaan",
+        "hold_store_solar_short": "Niet ontladen; {kwh} kWh zonne-overschot opslaan",
         "self_cover": "Huis gebruikt de batterij (prijs {price})",
         "self_store_solar": "{kwh} kWh zonne-overschot opslaan",
         "self_full": "Batterij vol, het zonne-overschot gaat naar het net",

@@ -85,6 +85,7 @@ KEY_WORK_MODE: Final = "user_work_mode"
 KEY_FORCE_MODE: Final = "force_mode"
 KEY_CHARGE_POWER: Final = "set_charge_power"
 KEY_DISCHARGE_POWER: Final = "set_discharge_power"
+KEY_MAX_DISCHARGE_POWER: Final = "max_discharge_power"
 KEY_RS485: Final = "rs485_control_mode"
 KEY_SOC: Final = "battery_soc"
 KEY_BATTERY_POWER: Final = "battery_power"
@@ -96,6 +97,9 @@ WORK_MODE_SELF_CONSUMPTION: Final = "anti_feed"
 FORCE_STANDBY: Final = "standby"
 FORCE_CHARGE: Final = "charge"
 FORCE_DISCHARGE: Final = "discharge"
+# Marstek-only action: hold with force mode standby, also when there is a solar
+# surplus. Plain hold stores the surplus when the discharge limit can be set.
+MARSTEK_STANDBY: Final = "standby"
 
 # The Marstek accepts power setpoints in steps of 50 W up to 2500 W.
 MARSTEK_POWER_STEP: Final = 50

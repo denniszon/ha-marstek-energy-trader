@@ -135,6 +135,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TraderConfigEntry) -> bo
     # report 0, and Home Assistant counts the jump back as a meter reset that
     # adds every kWh measured so far to today.
     await coordinator.tracker.async_load()
+    await coordinator.controller.async_load()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Entities have restored their settings now, so the first plan uses them.
     await coordinator.async_start()

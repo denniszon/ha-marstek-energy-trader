@@ -84,6 +84,9 @@ class Strategy:
     min_profit: float = 0.04
     # May the battery deliver more than the house uses (export to the grid)?
     allow_grid_export: bool = False
+    # Can hold store a solar surplus without discharging? Then hold may still
+    # choose standby, when exporting the surplus is worth more.
+    hold_stores_solar: bool = False
 
 
 @dataclass(frozen=True)
@@ -116,6 +119,8 @@ class PlannedSlot:
     baseline_cost: float
     reason: Reason
     forced: bool = False
+    # Hold without storing the solar surplus (force mode standby).
+    standby: bool = False
 
     @property
     def savings(self) -> float:
@@ -143,6 +148,7 @@ class _Option:
     action: str
     target: int
     battery_kwh: float
+    standby: bool = False
 
 
 class _Grid:
@@ -175,7 +181,15 @@ class _Grid:
         min_moves = max(1, math.ceil(MIN_POWER_W / 1000 * hours * eta / step))
         for action in actions:
             if action == ACTION_HOLD:
-                options.append(_Option(ACTION_HOLD, i, 0.0))
+                stored = (
+                    self._store_surplus(slot, i, room, ACTION_HOLD)
+                    if self.strategy.hold_stores_solar
+                    else None
+                )
+                if stored and stored.battery_kwh:
+                    options += [stored, _Option(ACTION_HOLD, i, 0.0, standby=True)]
+                else:
+                    options.append(_Option(ACTION_HOLD, i, 0.0))
             elif action == ACTION_SELF:
                 options.append(self._self_consumption(slot, i, room, available))
             elif action == ACTION_CHARGE:
@@ -207,9 +221,16 @@ class _Grid:
             wanted = min(net, self.battery.max_discharge_w / 1000 * hours)
             moves = min(int(wanted / eta / step + EPSILON), available)
             return _Option(ACTION_SELF, i - moves, -moves * step * eta)
-        wanted = min(-net, self.battery.max_charge_w / 1000 * hours)
+        return self._store_surplus(slot, i, room, ACTION_SELF)
+
+    def _store_surplus(self, slot: Slot, i: int, room: int, action: str) -> _Option:
+        """Charge with the solar surplus, as far as it fits."""
+        step, eta = self.step, self.eta
+        wanted = min(
+            max(-slot.net_kwh, 0.0), self.battery.max_charge_w / 1000 * slot.hours
+        )
         moves = min(int(wanted * eta / step + EPSILON), room)
-        return _Option(ACTION_SELF, i + moves, moves * step / eta)
+        return _Option(action, i + moves, moves * step / eta)
 
 
 def _forced_options(
@@ -296,6 +317,7 @@ def make_plan(slots: list[Slot], battery: Battery, strategy: Strategy) -> Plan:
                 baseline_cost=grid_cost(slot.net_kwh, slot.buy, slot.sell),
                 reason=Reason("pending"),
                 forced=slot.forced_action is not None,
+                standby=option.standby,
             )
         )
         i = option.target
@@ -338,6 +360,11 @@ def _reason(slot: PlannedSlot, later: list[PlannedSlot]) -> Reason:
             return Reason("discharge_export", params | {"price": slot.sell})
         return Reason("discharge_expensive", params)
     if slot.action == ACTION_HOLD:
+        if slot.battery_kwh > 0:
+            params = {"kwh": round(slot.battery_kwh, 2)}
+            if use := next(iter(_delivering(later)), None):
+                params |= {"later_price": use.buy, "later_start": use.start}
+            return Reason("hold_store_solar", params)
         if use := next(iter(_delivering(later)), None):
             return Reason(
                 "hold_for_later",
