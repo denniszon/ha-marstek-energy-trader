@@ -104,9 +104,11 @@ def trader_options(marstek: MockConfigEntry) -> dict:
 
 
 async def setup_trader(
-    hass: HomeAssistant, marstek: MockConfigEntry
+    hass: HomeAssistant, marstek: MockConfigEntry, options: dict | None = None
 ) -> MockConfigEntry:
-    entry = MockConfigEntry(domain=DOMAIN, options=trader_options(marstek))
+    entry = MockConfigEntry(
+        domain=DOMAIN, options=trader_options(marstek) | (options or {})
+    )
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()

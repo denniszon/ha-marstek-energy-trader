@@ -58,7 +58,9 @@
           "weather_entity": "Weather",
           "pv_peak_power": "Solar panel peak power",
           "consumption_sensor": "Household consumption sensor",
-          "base_load": "Average consumption"
+          "base_load": "Average consumption",
+          "block_discharge_entities": "Block discharging while these use power",
+          "block_discharge_threshold": "Blocking threshold"
         },
         "data_description": {
           "grid_power_sensor": "For example the active power of a HomeWizard P1 meter. Used to tell grid and solar energy apart.",
@@ -66,7 +68,9 @@
           "weather_entity": "Used for a rough solar estimate from cloud cover when there is no solar forecast.",
           "pv_peak_power": "Needed for the weather estimate.",
           "consumption_sensor": "Power (W) or energy (kWh) of the house. The average per hour of the last 7 days is used.",
-          "base_load": "Used when there is no consumption sensor."
+          "base_load": "Used when there is no consumption sensor.",
+          "block_discharge_entities": "For example a wallbox, dishwasher or dryer. Power sensors count above the threshold, switches and binary sensors while on. The battery then holds (no discharging; a solar surplus is still stored) until all are quiet for 2 minutes.",
+          "block_discharge_threshold": "Power above which a power sensor blocks discharging."
         }
       }
     }
@@ -126,7 +130,9 @@
           "weather_entity": "Weather",
           "pv_peak_power": "Solar panel peak power",
           "consumption_sensor": "Household consumption sensor",
-          "base_load": "Average consumption"
+          "base_load": "Average consumption",
+          "block_discharge_entities": "Block discharging while these use power",
+          "block_discharge_threshold": "Blocking threshold"
         },
         "data_description": {
           "grid_power_sensor": "For example the active power of a HomeWizard P1 meter. Used to tell grid and solar energy apart.",
@@ -134,7 +140,9 @@
           "weather_entity": "Used for a rough solar estimate from cloud cover when there is no solar forecast.",
           "pv_peak_power": "Needed for the weather estimate.",
           "consumption_sensor": "Power (W) or energy (kWh) of the house. The average per hour of the last 7 days is used.",
-          "base_load": "Used when there is no consumption sensor."
+          "base_load": "Used when there is no consumption sensor.",
+          "block_discharge_entities": "For example a wallbox, dishwasher or dryer. Power sensors count above the threshold, switches and binary sensors while on. The battery then holds (no discharging; a solar surplus is still stored) until all are quiet for 2 minutes.",
+          "block_discharge_threshold": "Power above which a power sensor blocks discharging."
         }
       }
     }

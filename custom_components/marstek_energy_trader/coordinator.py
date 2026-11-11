@@ -10,9 +10,17 @@ import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    ATTR_UNIT_OF_MEASUREMENT,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfPower,
+)
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import (
+    async_call_later,
     async_track_point_in_time,
     async_track_state_change_event,
     async_track_time_change,
@@ -21,16 +29,21 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import PowerConverter
 
 from .const import (
     ACTION_DISCHARGE,
     ACTION_HOLD,
     ACTION_SELF,
+    BLOCK_RELEASE_DELAY,
+    CONF_BLOCK_ENTITIES,
+    CONF_BLOCK_THRESHOLD,
     CONF_FEED_IN_SENSOR,
     CONF_PRICE_SENSOR,
     CONF_SOLCAST_TODAY,
     CONF_SOLCAST_TOMORROW,
     DECISION_LOG_SIZE,
+    DEFAULT_BLOCK_THRESHOLD,
     DOMAIN,
     EVENT_ACTION,
     KEY_SOC,
@@ -49,7 +62,7 @@ from .const import (
 from .inputs import InputError, Override, PlanSettings, TraderInputs
 from .marstek import MarstekController, MarstekEntities, marstek_power
 from .planner import Plan, PlannedSlot, Strategy, make_plan
-from .reasons import describe
+from .reasons import describe, describe_block
 from .tracker import SavingsTracker
 
 _LOGGER = logging.getLogger(__name__)
@@ -178,6 +191,11 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         self._planned_at: datetime | None = None
         self._last_apply: datetime | None = None
         self._override_timers: list[CALLBACK_TYPE] = []
+        # A load (wallbox, dryer, ...) is on: hold whatever the plan says.
+        self.blocked = False
+        self._block_reason = ""
+        self._block_names: list[str] = []
+        self._block_release: CALLBACK_TYPE | None = None
 
     @property
     def language(self) -> str:
@@ -223,6 +241,14 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 self._async_on_soc_change,
             )
         )
+        if blockers := self.options.get(CONF_BLOCK_ENTITIES):
+            entry.async_on_unload(
+                async_track_state_change_event(
+                    self.hass, blockers, self._async_on_block_change
+                )
+            )
+            entry.async_on_unload(self._cancel_block_release)
+            self.blocked = bool(self._active_loads())
         entry.async_on_unload(self.tracker.async_save_now)
         entry.async_on_unload(self.controller.async_save_now)
         entry.async_on_unload(self.cancel_override_timers)
@@ -243,6 +269,75 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             event.data["old_state"]
         ):
             self.hass.async_create_task(self.async_request_refresh())
+
+    def _active_loads(self) -> list[tuple[str, float | None]]:
+        """Blocking loads in use: name and power in W (None for a switch)."""
+        threshold = self.options.get(CONF_BLOCK_THRESHOLD, DEFAULT_BLOCK_THRESHOLD)
+        loads: list[tuple[str, float | None]] = []
+        for entity_id in self.options.get(CONF_BLOCK_ENTITIES, []):
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                continue
+            if state.domain != "sensor":
+                if state.state == STATE_ON:
+                    loads.append((state.name, None))
+                continue
+            try:
+                power = float(state.state)
+            except ValueError:
+                continue
+            unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+            if unit in PowerConverter.VALID_UNITS:
+                power = PowerConverter.convert(power, unit, UnitOfPower.WATT)
+            if power > threshold:
+                loads.append((state.name, power))
+        return loads
+
+    def _loads_unknown(self) -> bool:
+        """A blocking entity is unavailable: it may still be in use."""
+        for entity_id in self.options.get(CONF_BLOCK_ENTITIES, []):
+            state = self.hass.states.get(entity_id)
+            if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                return True
+        return False
+
+    @callback
+    def _async_on_block_change(self, _event: Event) -> None:
+        if loads := self._active_loads():
+            self._cancel_block_release()
+            names = [name for name, _ in loads]
+            if not self.blocked or names != self._block_names:
+                # Also when another load joins in, so the reason names it.
+                self.blocked = True
+                self._block_names = names
+                self.config_entry.async_create_background_task(
+                    self.hass, self._async_reapply(), f"{DOMAIN} block"
+                )
+        elif self.blocked and self._block_release is None and not self._loads_unknown():
+            # Wait a while: a car or dryer pauses now and then.
+            self._block_release = async_call_later(
+                self.hass, BLOCK_RELEASE_DELAY, self._async_end_block
+            )
+
+    async def _async_end_block(self, _now: datetime) -> None:
+        self._block_release = None
+        if not self._active_loads() and not self._loads_unknown():
+            self.blocked = False
+            await self.async_request_refresh()
+
+    @callback
+    def _cancel_block_release(self) -> None:
+        if self._block_release:
+            self._block_release()
+            self._block_release = None
+
+    async def _async_reapply(self) -> None:
+        """Apply the current plan again now, without waiting for a replan."""
+        if self.data is None:
+            return
+        async with self._lock:
+            data = await self._async_execute_locked(self.data)
+        self.async_set_updated_data(data)
 
     async def _async_watchdog(self, now: datetime) -> None:
         """Re-apply the current action when the Marstek drifted away from it."""
@@ -298,7 +393,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     def _count_planned_savings(self, now: datetime) -> None:
         """Add the expected savings of the time since the previous plan."""
         current = self.data.current if self.data else None
-        if current and self._planned_at:
+        if current and self._planned_at and not self.blocked:
             start = max(self._planned_at, current.start)
             end = min(now, current.end)
             duration = (current.end - current.start).total_seconds()
@@ -357,6 +452,10 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     def _marstek_action(self, data: TraderData) -> tuple[str, int]:
         """What to tell the Marstek for the planned action."""
         current = data.current
+        if self.blocked and data.status != STATUS_OFF:
+            if current and current.action == ACTION_HOLD and current.standby:
+                return MARSTEK_STANDBY, 0
+            return ACTION_HOLD, 0
         if current is None:
             # Off or no plan: let the Marstek follow the house by itself.
             return ACTION_SELF, 0
@@ -403,6 +502,13 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     async def _async_execute_locked(self, data: TraderData) -> TraderData:
         if data.status == STATUS_ERROR:
             data = replace(data, status=self._planned_status(data), message=None)
+        if self.blocked and data.current is not None:
+            # Waiting keeps its status and message; the Marstek holds anyway.
+            if loads := self._active_loads():
+                self._block_reason = describe_block(loads, self.language)
+            data = replace(
+                data, status=ACTION_HOLD, power_w=0, reason=self._block_reason
+            )
         action, power_w = self._marstek_action(data)
         dry_run = self.settings.dry_run
         if data.status == STATUS_OFF and self._released:

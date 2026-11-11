@@ -58,7 +58,9 @@
           "weather_entity": "Weer",
           "pv_peak_power": "Piekvermogen zonnepanelen",
           "consumption_sensor": "Sensor huishoudelijk verbruik",
-          "base_load": "Gemiddeld verbruik"
+          "base_load": "Gemiddeld verbruik",
+          "block_discharge_entities": "Ontladen blokkeren bij verbruik van",
+          "block_discharge_threshold": "Drempel voor blokkeren"
         },
         "data_description": {
           "grid_power_sensor": "Bijvoorbeeld het actieve vermogen van een HomeWizard P1-meter. Hiermee wordt net- en zonne-energie uit elkaar gehouden.",
@@ -66,7 +68,9 @@
           "weather_entity": "Voor een grove zonschatting op basis van bewolking als er geen zonneverwachting is.",
           "pv_peak_power": "Nodig voor de schatting op basis van het weer.",
           "consumption_sensor": "Vermogen (W) of energie (kWh) van het huis. Het gemiddelde per uur van de laatste 7 dagen wordt gebruikt.",
-          "base_load": "Gebruikt als er geen verbruikssensor is."
+          "base_load": "Gebruikt als er geen verbruikssensor is.",
+          "block_discharge_entities": "Bijvoorbeeld een laadpaal, vaatwasser of droger. Vermogenssensoren tellen boven de drempel, schakelaars en binaire sensoren als ze aan staan. De batterij houdt dan vast (niet ontladen; zonne-overschot wordt wel opgeslagen) tot alles 2 minuten rustig is.",
+          "block_discharge_threshold": "Vermogen waarboven een vermogenssensor het ontladen blokkeert."
         }
       }
     }
@@ -126,7 +130,9 @@
           "weather_entity": "Weer",
           "pv_peak_power": "Piekvermogen zonnepanelen",
           "consumption_sensor": "Sensor huishoudelijk verbruik",
-          "base_load": "Gemiddeld verbruik"
+          "base_load": "Gemiddeld verbruik",
+          "block_discharge_entities": "Ontladen blokkeren bij verbruik van",
+          "block_discharge_threshold": "Drempel voor blokkeren"
         },
         "data_description": {
           "grid_power_sensor": "Bijvoorbeeld het actieve vermogen van een HomeWizard P1-meter. Hiermee wordt net- en zonne-energie uit elkaar gehouden.",
@@ -134,7 +140,9 @@
           "weather_entity": "Voor een grove zonschatting op basis van bewolking als er geen zonneverwachting is.",
           "pv_peak_power": "Nodig voor de schatting op basis van het weer.",
           "consumption_sensor": "Vermogen (W) of energie (kWh) van het huis. Het gemiddelde per uur van de laatste 7 dagen wordt gebruikt.",
-          "base_load": "Gebruikt als er geen verbruikssensor is."
+          "base_load": "Gebruikt als er geen verbruikssensor is.",
+          "block_discharge_entities": "Bijvoorbeeld een laadpaal, vaatwasser of droger. Vermogenssensoren tellen boven de drempel, schakelaars en binaire sensoren als ze aan staan. De batterij houdt dan vast (niet ontladen; zonne-overschot wordt wel opgeslagen) tot alles 2 minuten rustig is.",
+          "block_discharge_threshold": "Vermogen waarboven een vermogenssensor het ontladen blokkeert."
         }
       }
     }

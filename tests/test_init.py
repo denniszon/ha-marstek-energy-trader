@@ -424,6 +424,91 @@ async def test_hold_with_discharge_limit_stores_solar(
     assert calls[0] == (marstek_entity_id("max_discharge_power"), 2500)
 
 
+async def test_load_blocks_discharging(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(NIGHT)
+    marstek = add_marstek(hass)
+    set_prices(hass, datetime.fromisoformat(NIGHT))
+    hass.states.async_set(
+        "sensor.wallbox_power",
+        "0",
+        {"unit_of_measurement": "kW", "friendly_name": "Wallbox"},
+    )
+    hass.states.async_set("binary_sensor.dryer", "off", {"friendly_name": "Dryer"})
+    entry = await setup_trader(
+        hass,
+        marstek,
+        {"block_discharge_entities": ["sensor.wallbox_power", "binary_sensor.dryer"]},
+    )
+    calls = _record_writes(entry)
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    assert calls[-1] == (marstek_entity_id("force_mode"), "charge")
+
+    # The car starts charging: hold at once, whatever the plan says.
+    hass.states.async_set(
+        "sensor.wallbox_power",
+        "7.4",
+        {"unit_of_measurement": "kW", "friendly_name": "Wallbox"},
+    )
+    hass.states.async_set("binary_sensor.dryer", "on", {"friendly_name": "Dryer"})
+    await hass.async_block_till_done()
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.state == "hold"
+    assert status.attributes["reason"] == (
+        "Discharging blocked: Wallbox uses 7.4 kW, Dryer is on"
+    )
+    assert calls[-1] == (marstek_entity_id("force_mode"), "standby")
+
+    # A replan keeps holding.
+    freezer.move_to("2026-10-26T03:15:02+01:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "hold"
+    assert calls[-1] == (marstek_entity_id("force_mode"), "standby")
+
+    # Both stop; the battery follows the plan again after two quiet minutes.
+    hass.states.async_set(
+        "sensor.wallbox_power",
+        "0.2",
+        {"unit_of_measurement": "kW", "friendly_name": "Wallbox"},
+    )
+    hass.states.async_set("binary_sensor.dryer", "off", {"friendly_name": "Dryer"})
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "hold"
+    freezer.tick(timedelta(minutes=1, seconds=5))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "charge"
+    assert calls[-1] == (marstek_entity_id("force_mode"), "charge")
+
+
+async def test_unavailable_load_keeps_the_block(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(NIGHT)
+    marstek = add_marstek(hass)
+    set_prices(hass, datetime.fromisoformat(NIGHT))
+    hass.states.async_set("sensor.wallbox_power", "7400", {"unit_of_measurement": "W"})
+    await setup_trader(
+        hass, marstek, {"block_discharge_entities": ["sensor.wallbox_power"]}
+    )
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "hold"
+
+    # The wallbox drops off the network mid-charge: it may still be charging.
+    hass.states.async_set("sensor.wallbox_power", "unavailable")
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=3))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "hold"
+
+
 async def test_price_units_are_converted(hass: HomeAssistant) -> None:
     for unit, value in (("ct/kWh", 14), ("€/MWh", 140), ("EUR/kWh", 0.14)):
         hass.states.async_set(

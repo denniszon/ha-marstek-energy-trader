@@ -31,6 +31,9 @@ TEXTS = {
         "self_store_solar": "Storing {kwh} kWh of solar surplus",
         "self_full": "Battery full, the solar surplus goes to the grid",
         "self_empty": "Battery at its reserve, the house uses the grid",
+        "blocked": "Discharging blocked: {loads}",
+        "load_power": "{name} uses {power}",
+        "load_on": "{name} is on",
         "pending": "",
     },
     "nl": {
@@ -57,6 +60,9 @@ TEXTS = {
         "self_store_solar": "{kwh} kWh zonne-overschot opslaan",
         "self_full": "Batterij vol, het zonne-overschot gaat naar het net",
         "self_empty": "Batterij op reserve, het huis gebruikt het net",
+        "blocked": "Ontladen geblokkeerd: {loads}",
+        "load_power": "{name} gebruikt {power}",
+        "load_on": "{name} staat aan",
         "pending": "",
     },
 }
@@ -80,3 +86,15 @@ def describe(reason: Reason, language: str, tz: tzinfo) -> str:
     if "kwh" in reason.params:
         params["kwh"] = f"{reason.params['kwh']:.2f}"
     return texts[code].format(**params)
+
+
+def describe_block(loads: list[tuple[str, float | None]], language: str) -> str:
+    """Why discharging is blocked: each load with its power in W, or None if on."""
+    texts = TEXTS.get(language.split("-")[0], TEXTS["en"])
+    parts = [
+        texts["load_on"].format(name=name)
+        if power is None
+        else texts["load_power"].format(name=name, power=f"{power / 1000:.1f} kW")
+        for name, power in loads
+    ]
+    return texts["blocked"].format(loads=", ".join(parts))

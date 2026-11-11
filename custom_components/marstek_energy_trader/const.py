@@ -27,6 +27,8 @@ CONF_WEATHER: Final = "weather_entity"
 CONF_PV_POWER: Final = "pv_peak_power"
 CONF_CONSUMPTION_SENSOR: Final = "consumption_sensor"
 CONF_BASE_LOAD: Final = "base_load"
+CONF_BLOCK_ENTITIES: Final = "block_discharge_entities"
+CONF_BLOCK_THRESHOLD: Final = "block_discharge_threshold"
 
 # Sign of the Marstek battery_power sensor.
 SIGN_POSITIVE_DISCHARGE: Final = "positive_discharge"
@@ -46,6 +48,7 @@ SOLAR_SOLCAST: Final = "solcast"
 
 DEFAULT_EFFICIENCY: Final = 85
 DEFAULT_BASE_LOAD: Final = 400
+DEFAULT_BLOCK_THRESHOLD: Final = 500
 
 # Operating modes (select entity).
 MODE_OFF: Final = "off"
@@ -108,6 +111,8 @@ MARSTEK_MAX_POWER: Final = 2500
 REPLAN_INTERVAL: Final = timedelta(minutes=15)
 SAVINGS_INTERVAL: Final = timedelta(seconds=30)
 CONSUMPTION_PROFILE_MAX_AGE: Final = timedelta(hours=6)
+# How long every blocking load must be quiet before the battery may discharge.
+BLOCK_RELEASE_DELAY: Final = timedelta(minutes=2)
 DECISION_LOG_SIZE: Final = 20
 
 EVENT_ACTION: Final = f"{DOMAIN}_action"

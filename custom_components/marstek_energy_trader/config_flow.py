@@ -18,6 +18,8 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_BASE_LOAD,
     CONF_BATTERY_POWER_SIGN,
+    CONF_BLOCK_ENTITIES,
+    CONF_BLOCK_THRESHOLD,
     CONF_CAPACITY,
     CONF_CONSUMPTION_SENSOR,
     CONF_EFFICIENCY,
@@ -37,6 +39,7 @@ from .const import (
     CONF_SOLCAST_TOMORROW,
     CONF_WEATHER,
     DEFAULT_BASE_LOAD,
+    DEFAULT_BLOCK_THRESHOLD,
     DEFAULT_EFFICIENCY,
     DOMAIN,
     FEED_IN_FIXED,
@@ -141,6 +144,18 @@ SOURCES_SCHEMA = probatio.Schema(
         probatio.Required(CONF_BASE_LOAD, default=DEFAULT_BASE_LOAD): _number(
             0, 10000, 10, "W"
         ),
+        probatio.Optional(CONF_BLOCK_ENTITIES): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                filter=[
+                    {"domain": "sensor", "device_class": "power"},
+                    {"domain": ["switch", "binary_sensor", "input_boolean"]},
+                ],
+                multiple=True,
+            )
+        ),
+        probatio.Required(
+            CONF_BLOCK_THRESHOLD, default=DEFAULT_BLOCK_THRESHOLD
+        ): _number(0, 25000, 50, "W"),
     }
 )
 

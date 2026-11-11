@@ -65,6 +65,7 @@ Updates verschijnen in HACS zodra er een nieuwe release is.
 | | Zonneverwachting | Forecast.Solar (kies de configuratie) of Solcast (sensoren *Forecast Today/Tomorrow*). |
 | | Weer + piekvermogen | Alleen voor de schatting op basis van bewolking. |
 | | Verbruik | Sensor in W of kWh; anders het vaste gemiddelde verbruik. |
+| | Ontladen blokkeren | Optioneel: laadpaal, vaatwasser, droger, ... Vermogenssensoren tellen boven de drempel (standaard 500 W), schakelaars en binaire sensoren als ze aan staan. Zie *Ontladen blokkeren* onder [Hoe werkt het?](#hoe-werkt-het). |
 
 ## Bediening (dashboard)
 
@@ -158,6 +159,8 @@ Een **watchdog** (standaard elke 5 minuten) controleert of de Marstek nog doet w
 - ontladen naar het huis bespaart de prijs, ontladen naar het net levert de terugleverprijs op.
 
 Zonder netvermogen-sensor telt laden als "uit het net" en ontladen als "naar het huis".
+
+**Ontladen blokkeren.** Zolang een van de gekozen apparaten verbruikt, gaat de batterij direct op *Vasthouden*, wat de planning ook zegt: geen ontladen, en ook geen gepland laden of ontladen. Met *Max Discharge Power* wordt zonne-overschot nog wel opgeslagen. Ook een nieuwe planning, een handmatige overschrijving of de watchdog verandert dat niet. Pas als alle apparaten 2 minuten rustig zijn, volgt de batterij de planning weer. Valt een apparaat tijdens de blokkade weg (onbeschikbaar), dan blijft de blokkade staan tot het weer meldt dat het rustig is. De reden in de status noemt de apparaten, bijvoorbeeld *"Ontladen geblokkeerd: Wallbox gebruikt 7.4 kW"*; de naam is de naam van de entiteit in Home Assistant. In de modus *Uit* doet de blokkade niets.
 
 ## Bekende beperkingen
 
