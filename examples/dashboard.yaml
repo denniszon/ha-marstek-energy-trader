@@ -11,7 +11,7 @@ views:
   icon: mdi:home-battery
   cards:
   - type: markdown
-    title: Batterij-handelaar
+    title: Marstek Energy Trader
     content: |
       {% set status = states('sensor.marstek_energy_trader_status') %}
       {% set names = {'charge': '🔋 Laden', 'discharge': '⚡ Ontladen', 'hold': '⏸️ Vasthouden',

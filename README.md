@@ -32,7 +32,7 @@ Home Assistant-integratie die een **Marstek Venus E** automatisch laat laden en 
 - Home Assistant **2026.9** of nieuwer.
 - [Marstek Venus Modbus](https://github.com/ViperRNMC/marstek_venus_modbus) met je Venus E. Zet in die integratie deze entiteiten **aan** (ze staan standaard uit): *Force Mode*, *Set Charge Power*, *Set Discharge Power* en *RS485 Control Mode*. Ook nodig: *User Work Mode* en *Battery SOC*.
   Voor de besparing: *Total Charging Energy*, *Total Discharging Energy* en *Battery Power*.
-  Aanrader: *Max Discharge Power*. Dan laadt de batterij tijdens *Vasthouden* nog wel van zonne-overschot (ook als de zonneverwachting dat niet zag), in plaats van stil te staan. De integratie zet die limiet buiten *Vasthouden* op het ingestelde *Maximaal ontlaadvermogen* van de trader, maar nooit hoger dan de waarde die je zelf op de Marstek had staan (bijvoorbeeld een wettelijke 800 W). Die waarde onthoudt hij ook na een herstart. Staat de limiet bij de eerste start al op 0, dan kent hij jouw waarde niet: zet *Maximaal ontlaadvermogen* van de trader dan zelf op de juiste grens. Zet je *Max Discharge Power* later weer uit, controleer dan eerst dat hij niet op 0 staat: de trader stuurt hem daarna niet meer aan.
+  Aanrader: *Max Discharge Power*. Dan laadt de batterij tijdens *Vasthouden* nog wel van zonne-overschot (ook als de zonneverwachting dat niet zag), in plaats van stil te staan. De integratie zet die limiet buiten *Vasthouden* op het ingestelde *Maximaal ontlaadvermogen* van de integratie, maar nooit hoger dan de waarde die je zelf op de Marstek had staan (bijvoorbeeld een wettelijke 800 W). Die waarde onthoudt hij ook na een herstart. Staat de limiet bij de eerste start al op 0, dan kent hij jouw waarde niet: zet *Maximaal ontlaadvermogen* van de integratie dan zelf op de juiste grens. Zet je *Max Discharge Power* later weer uit, controleer dan eerst dat hij niet op 0 staat: de integratie stuurt hem daarna niet meer aan.
 - Voor zelfverbruik moet de Marstek zelf een meter hebben (CT of P1 in de Marstek-app), want dan regelt de Marstek de nul-op-de-meter.
 - Een **prijssensor met de prijzen van de komende uren als attribuut**. Getest formaat: `raw_today`/`raw_tomorrow` (bijvoorbeeld [ANWB Energie](https://github.com/denniszon/ha-anwb-energie) of Nord Pool). Ook herkend: `prices_today`/`prices_tomorrow` (ENTSO-e) en `prices`.
 - Optioneel:
@@ -145,7 +145,7 @@ In [`examples/`](examples/) (apexcharts-card nodig):
 | Vasthouden (zonder *Max Discharge Power*, of als terugleveren meer oplevert dan opslaan) | RS485 aan → force mode *standby* |
 | Zelfverbruik / Uit / geen gegevens | user work mode *zelfverbruik*, RS485 uit |
 
-Met *Max Discharge Power* zet elke actie behalve *Vasthouden* die limiet eerst terug op het *Maximaal ontlaadvermogen* van de trader.
+Met *Max Discharge Power* zet elke actie behalve *Vasthouden* die limiet eerst terug op het *Maximaal ontlaadvermogen* van de integratie.
 
 De Marstek kent de reserve van de planner niet. Staat hij in zelfverbruik op of onder de reserve terwijl het huis stroom van het net haalt, dan zet de integratie hem op *Vasthouden*, zodat de reserve blijft staan. Met *Max Discharge Power* gebeurt dat op of onder de reserve altijd, want *Vasthouden* slaat zonne-overschot dan toch op.
 

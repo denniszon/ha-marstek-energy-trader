@@ -1,6 +1,6 @@
 # What the trader does now, why, and the next 12 time slots.
 type: markdown
-title: Batterij-handelaar
+title: Marstek Energy Trader
 content: |
   {% set status = states('sensor.marstek_energy_trader_status') %}
   {% set names = {'charge': '🔋 Laden', 'discharge': '⚡ Ontladen', 'hold': '⏸️ Vasthouden',
