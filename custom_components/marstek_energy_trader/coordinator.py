@@ -321,6 +321,13 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 self.hass, BLOCK_RELEASE_DELAY, self._async_end_block
             )
 
+    @property
+    def block_reason(self) -> str | None:
+        """Why discharging is blocked now, or None."""
+        if not self.blocked or self.settings.mode == MODE_OFF:
+            return None
+        return self._block_reason or None
+
     def _holds_for_block(self, data: TraderData | None) -> bool:
         """A load blocks the battery now; planned charging may be allowed."""
         if not self.blocked or data is None or data.status == STATUS_OFF:

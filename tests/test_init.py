@@ -1,6 +1,7 @@
 """The trader inside Home Assistant, with a fake Marstek battery."""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
@@ -10,6 +11,7 @@ from pytest_homeassistant_custom_component.common import (
     async_capture_events,
     async_fire_time_changed,
 )
+import yaml
 
 from custom_components.marstek_energy_trader.const import (
     CONF_FEED_IN_MODE,
@@ -26,6 +28,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import EVENT_STATE_CHANGED
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.template import Template
 
 from .common import (
     GRID_SENSOR,
@@ -41,6 +44,7 @@ NIGHT = "2026-10-26T03:10:00+01:00"
 EVENING = "2026-10-26T18:10:00+01:00"
 # Leaves room for the watchdog before the next 15-minute replan.
 QUARTER_PAST = "2026-10-26T03:16:00+01:00"
+EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 def _record_writes(entry: ConfigEntry) -> list[tuple]:
@@ -459,6 +463,10 @@ async def test_load_blocks_discharging(
     assert status.attributes["reason"] == (
         "Discharging blocked: Wallbox uses 7.4 kW, Dryer is on"
     )
+    assert status.attributes["blocked"] == status.attributes["reason"]
+    card = yaml.safe_load((EXAMPLES / "status-card.yaml").read_text())
+    text = Template(card["content"], hass).async_render(parse_result=False)
+    assert '<ha-alert alert-type="warning">Discharging blocked' in text
     assert calls[-1] == (marstek_entity_id("force_mode"), "standby")
 
     # A replan keeps holding.
@@ -483,7 +491,9 @@ async def test_load_blocks_discharging(
     freezer.tick(timedelta(minutes=1, seconds=5))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
-    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "charge"
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.state == "charge"
+    assert status.attributes["blocked"] is None
     assert calls[-1] == (marstek_entity_id("force_mode"), "charge")
 
 

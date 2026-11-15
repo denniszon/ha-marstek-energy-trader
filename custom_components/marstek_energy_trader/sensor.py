@@ -86,6 +86,7 @@ class StatusSensor(TraderEntity, SensorEntity):
             "reason": (data.reason or data.message) if data else None,
             "power_w": data.power_w if data else 0,
             "marstek_action": data.marstek_action if data else None,
+            "blocked": self.coordinator.block_reason,
             "mode": settings.mode,
             "dry_run": settings.dry_run,
             "override_until": override.end.isoformat() if override else None,

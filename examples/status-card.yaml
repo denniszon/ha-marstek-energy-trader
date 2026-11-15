@@ -9,11 +9,17 @@ content: |
   {% if is_state('switch.marstek_energy_trader_dry_run', 'on') %}
   > 🧪 **Proefdraaien**: er wordt niets naar de Marstek gestuurd.
   {% endif %}
+  {% set blocked = state_attr('sensor.marstek_energy_trader_status', 'blocked') %}
+  {% if blocked %}
+  <ha-alert alert-type="warning">{{ blocked }}</ha-alert>
+
+  {% endif %}
   **{{ names.get(status, status) }}**
   {%- set power = state_attr('sensor.marstek_energy_trader_status', 'power_w') %}
   {%- if power %} · {{ power }} W{% endif %}
 
-  {{ state_attr('sensor.marstek_energy_trader_status', 'reason') }}
+  {% set reason = state_attr('sensor.marstek_energy_trader_status', 'reason') %}
+  {% if reason != blocked %}{{ reason }}{% endif %}
 
   {% set until = state_attr('sensor.marstek_energy_trader_status', 'override_until') %}
   {% if until %}✋ Handmatig tot {{ as_timestamp(until) | timestamp_custom('%H:%M') }}{% endif %}

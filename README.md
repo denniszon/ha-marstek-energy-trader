@@ -100,7 +100,7 @@ Strategieën:
 
 | Entiteit | Inhoud |
 |---|---|
-| `sensor.marstek_energy_trader_status` | Huidige actie. Attributen: `reason`, `power_w`, `marstek_action` (wat de Marstek echt doet; `standby` bij vasthouden zonder zonne-overschot op te slaan), `writes`, `decisions` (laatste 20 beslissingen), `last_error`. |
+| `sensor.marstek_energy_trader_status` | Huidige actie. Attributen: `reason`, `power_w`, `marstek_action` (wat de Marstek echt doet; `standby` bij vasthouden zonder zonne-overschot op te slaan), `blocked` (reden van een ontlaadblokkade, anders leeg; de statuskaart toont die in een waarschuwingsblok), `writes`, `decisions` (laatste 20 beslissingen), `last_error`. |
 | `sensor.marstek_energy_trader_plan` | Verwachte besparing van de planning (€). Attribuut `plan`: per tijdvak `start`, `end`, `action`, `power_w` (+ laden, − ontladen), `soc_start`/`soc_end`, `buy`/`sell`, `solar_kwh`, `load_kwh`, `grid_kwh`, `savings`, `reason`. |
 | `sensor.marstek_energy_trader_next_change` | Wanneer de actie verandert, en naar wat. |
 | `sensor.marstek_energy_trader_target_power` / `planned_soc` | Gepland vermogen en batterijniveau nu (voor "werkelijk vs. gepland"). |
