@@ -29,6 +29,7 @@ CONF_CONSUMPTION_SENSOR: Final = "consumption_sensor"
 CONF_BASE_LOAD: Final = "base_load"
 CONF_BLOCK_ENTITIES: Final = "block_discharge_entities"
 CONF_BLOCK_THRESHOLD: Final = "block_discharge_threshold"
+CONF_BLOCK_ALLOW_CHARGE: Final = "block_allow_charge"
 
 # Sign of the Marstek battery_power sensor.
 SIGN_POSITIVE_DISCHARGE: Final = "positive_discharge"

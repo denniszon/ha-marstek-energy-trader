@@ -60,7 +60,8 @@
           "consumption_sensor": "Sensor huishoudelijk verbruik",
           "base_load": "Gemiddeld verbruik",
           "block_discharge_entities": "Ontladen blokkeren bij verbruik van",
-          "block_discharge_threshold": "Drempel voor blokkeren"
+          "block_discharge_threshold": "Drempel voor blokkeren",
+          "block_allow_charge": "Laden toestaan tijdens blokkade"
         },
         "data_description": {
           "grid_power_sensor": "Bijvoorbeeld het actieve vermogen van een HomeWizard P1-meter. Hiermee wordt net- en zonne-energie uit elkaar gehouden.",
@@ -70,7 +71,8 @@
           "consumption_sensor": "Vermogen (W) of energie (kWh) van het huis. Het gemiddelde per uur van de laatste 7 dagen wordt gebruikt.",
           "base_load": "Gebruikt als er geen verbruikssensor is.",
           "block_discharge_entities": "Bijvoorbeeld een laadpaal, vaatwasser of droger. Vermogenssensoren tellen boven de drempel, schakelaars en binaire sensoren als ze aan staan. De batterij houdt dan vast (niet ontladen; zonne-overschot wordt wel opgeslagen) tot alles 2 minuten rustig is.",
-          "block_discharge_threshold": "Vermogen waarboven een vermogenssensor het ontladen blokkeert."
+          "block_discharge_threshold": "Vermogen waarboven een vermogenssensor het ontladen blokkeert.",
+          "block_allow_charge": "Staat er op dat moment laden uit het net in de planning, dan gaat dat door. Ontladen blijft geblokkeerd."
         }
       }
     }
@@ -132,7 +134,8 @@
           "consumption_sensor": "Sensor huishoudelijk verbruik",
           "base_load": "Gemiddeld verbruik",
           "block_discharge_entities": "Ontladen blokkeren bij verbruik van",
-          "block_discharge_threshold": "Drempel voor blokkeren"
+          "block_discharge_threshold": "Drempel voor blokkeren",
+          "block_allow_charge": "Laden toestaan tijdens blokkade"
         },
         "data_description": {
           "grid_power_sensor": "Bijvoorbeeld het actieve vermogen van een HomeWizard P1-meter. Hiermee wordt net- en zonne-energie uit elkaar gehouden.",
@@ -142,7 +145,8 @@
           "consumption_sensor": "Vermogen (W) of energie (kWh) van het huis. Het gemiddelde per uur van de laatste 7 dagen wordt gebruikt.",
           "base_load": "Gebruikt als er geen verbruikssensor is.",
           "block_discharge_entities": "Bijvoorbeeld een laadpaal, vaatwasser of droger. Vermogenssensoren tellen boven de drempel, schakelaars en binaire sensoren als ze aan staan. De batterij houdt dan vast (niet ontladen; zonne-overschot wordt wel opgeslagen) tot alles 2 minuten rustig is.",
-          "block_discharge_threshold": "Vermogen waarboven een vermogenssensor het ontladen blokkeert."
+          "block_discharge_threshold": "Vermogen waarboven een vermogenssensor het ontladen blokkeert.",
+          "block_allow_charge": "Staat er op dat moment laden uit het net in de planning, dan gaat dat door. Ontladen blijft geblokkeerd."
         }
       }
     }

@@ -32,10 +32,12 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import PowerConverter
 
 from .const import (
+    ACTION_CHARGE,
     ACTION_DISCHARGE,
     ACTION_HOLD,
     ACTION_SELF,
     BLOCK_RELEASE_DELAY,
+    CONF_BLOCK_ALLOW_CHARGE,
     CONF_BLOCK_ENTITIES,
     CONF_BLOCK_THRESHOLD,
     CONF_FEED_IN_SENSOR,
@@ -319,6 +321,17 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 self.hass, BLOCK_RELEASE_DELAY, self._async_end_block
             )
 
+    def _holds_for_block(self, data: TraderData | None) -> bool:
+        """A load blocks the battery now; planned charging may be allowed."""
+        if not self.blocked or data is None or data.status == STATUS_OFF:
+            return False
+        current = data.current
+        return not (
+            self.options.get(CONF_BLOCK_ALLOW_CHARGE)
+            and current is not None
+            and current.action == ACTION_CHARGE
+        )
+
     async def _async_end_block(self, _now: datetime) -> None:
         self._block_release = None
         if not self._active_loads() and not self._loads_unknown():
@@ -393,7 +406,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     def _count_planned_savings(self, now: datetime) -> None:
         """Add the expected savings of the time since the previous plan."""
         current = self.data.current if self.data else None
-        if current and self._planned_at and not self.blocked:
+        if current and self._planned_at and not self._holds_for_block(self.data):
             start = max(self._planned_at, current.start)
             end = min(now, current.end)
             duration = (current.end - current.start).total_seconds()
@@ -452,7 +465,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     def _marstek_action(self, data: TraderData) -> tuple[str, int]:
         """What to tell the Marstek for the planned action."""
         current = data.current
-        if self.blocked and data.status != STATUS_OFF:
+        if self._holds_for_block(data):
             if current and current.action == ACTION_HOLD and current.standby:
                 return MARSTEK_STANDBY, 0
             return ACTION_HOLD, 0
@@ -502,10 +515,10 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
     async def _async_execute_locked(self, data: TraderData) -> TraderData:
         if data.status == STATUS_ERROR:
             data = replace(data, status=self._planned_status(data), message=None)
-        if self.blocked and data.current is not None:
+        if self.blocked and (loads := self._active_loads()):
+            self._block_reason = describe_block(loads, self.language)
+        if self._holds_for_block(data) and data.current is not None:
             # Waiting keeps its status and message; the Marstek holds anyway.
-            if loads := self._active_loads():
-                self._block_reason = describe_block(loads, self.language)
             data = replace(
                 data, status=ACTION_HOLD, power_w=0, reason=self._block_reason
             )

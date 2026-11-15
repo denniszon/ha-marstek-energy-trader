@@ -18,6 +18,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_BASE_LOAD,
     CONF_BATTERY_POWER_SIGN,
+    CONF_BLOCK_ALLOW_CHARGE,
     CONF_BLOCK_ENTITIES,
     CONF_BLOCK_THRESHOLD,
     CONF_CAPACITY,
@@ -156,6 +157,9 @@ SOURCES_SCHEMA = probatio.Schema(
         probatio.Required(
             CONF_BLOCK_THRESHOLD, default=DEFAULT_BLOCK_THRESHOLD
         ): _number(0, 25000, 50, "W"),
+        probatio.Required(
+            CONF_BLOCK_ALLOW_CHARGE, default=False
+        ): selector.BooleanSelector(),
     }
 )
 

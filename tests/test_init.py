@@ -487,6 +487,57 @@ async def test_load_blocks_discharging(
     assert calls[-1] == (marstek_entity_id("force_mode"), "charge")
 
 
+async def test_planned_charging_may_pass_the_block(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(NIGHT)
+    marstek = add_marstek(hass)
+    set_prices(hass, datetime.fromisoformat(NIGHT))
+    hass.states.async_set("sensor.wallbox_power", "7400", {"unit_of_measurement": "W"})
+    entry = await setup_trader(
+        hass,
+        marstek,
+        {
+            "block_discharge_entities": ["sensor.wallbox_power"],
+            "block_allow_charge": True,
+        },
+    )
+    calls = _record_writes(entry)
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    # The plan charges at night: that goes ahead while the car charges.
+    assert hass.states.get(f"sensor.{DOMAIN}_status").state == "charge"
+    assert calls[-1] == (marstek_entity_id("force_mode"), "charge")
+
+
+async def test_allowed_charging_still_blocks_discharging(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    freezer.move_to(EVENING)
+    marstek = add_marstek(hass)
+    hass.states.async_set(marstek_entity_id("battery_soc"), "90")
+    set_prices(hass, datetime.fromisoformat(EVENING))
+    hass.states.async_set("sensor.wallbox_power", "7400", {"unit_of_measurement": "W"})
+    entry = await setup_trader(
+        hass,
+        marstek,
+        {
+            "block_discharge_entities": ["sensor.wallbox_power"],
+            "block_allow_charge": True,
+        },
+    )
+    calls = _record_writes(entry)
+    plan = hass.states.get(f"sensor.{DOMAIN}_plan").attributes["plan"]
+    assert plan[0]["action"] in ("discharge", "self_consumption")
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.state == "hold"
+    assert status.attributes["reason"].startswith("Discharging blocked")
+    assert (marstek_entity_id("force_mode"), "discharge") not in calls
+    assert calls[-1] == (marstek_entity_id("force_mode"), "standby")
+
+
 async def test_unavailable_load_keeps_the_block(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory
 ) -> None:
