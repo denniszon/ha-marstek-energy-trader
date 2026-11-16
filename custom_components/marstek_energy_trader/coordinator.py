@@ -12,6 +12,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
+    STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
@@ -19,6 +20,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import (
     async_call_later,
     async_track_point_in_time,
@@ -48,11 +50,16 @@ from .const import (
     DEFAULT_BLOCK_THRESHOLD,
     DOMAIN,
     EVENT_ACTION,
+    ISSUE_RS485,
+    KEY_RS485,
     KEY_SOC,
     MARSTEK_MAX_POWER,
     MARSTEK_STANDBY,
     MODE_OFF,
     MODE_SOLAR_PRICE,
+    RS485_REPAIR_INTERVAL,
+    RS485_REPAIR_LIMIT,
+    RS485_REPAIR_WINDOW,
     SAVINGS_INTERVAL,
     STATUS_ERROR,
     STATUS_OFF,
@@ -62,7 +69,7 @@ from .const import (
     STRATEGY_PRESETS,
 )
 from .inputs import InputError, Override, PlanSettings, TraderInputs
-from .marstek import MarstekController, MarstekEntities, marstek_power
+from .marstek import MarstekController, MarstekEntities, marstek_power, needs_rs485
 from .planner import Plan, PlannedSlot, Strategy, make_plan
 from .reasons import describe, describe_block
 from .tracker import SavingsTracker
@@ -198,6 +205,10 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         self._block_reason = ""
         self._block_names: list[str] = []
         self._block_release: CALLBACK_TYPE | None = None
+        # Moments the Marstek dropped RS485 control by itself (last hour).
+        self._rs485_drops: deque[datetime] = deque()
+        self._rs485_repairs: deque[datetime] = deque()
+        self._rs485_issue = False
 
     @property
     def language(self) -> str:
@@ -243,6 +254,13 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 self._async_on_soc_change,
             )
         )
+        entry.async_on_unload(
+            async_track_state_change_event(
+                self.hass,
+                self.inputs.marstek.entity_ids[KEY_RS485],
+                self._async_on_rs485_change,
+            )
+        )
         if blockers := self.options.get(CONF_BLOCK_ENTITIES):
             entry.async_on_unload(
                 async_track_state_change_event(
@@ -254,6 +272,9 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
         entry.async_on_unload(self.tracker.async_save_now)
         entry.async_on_unload(self.controller.async_save_now)
         entry.async_on_unload(self.cancel_override_timers)
+        entry.async_on_unload(
+            lambda: ir.async_delete_issue(self.hass, DOMAIN, ISSUE_RS485)
+        )
 
     async def _async_on_time(self, _now: datetime) -> None:
         await self.async_request_refresh()
@@ -271,6 +292,89 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
             event.data["old_state"]
         ):
             self.hass.async_create_task(self.async_request_refresh())
+
+    @callback
+    def _async_on_rs485_change(self, event: Event) -> None:
+        """Switch RS485 control on again when the Marstek dropped it by itself.
+
+        Firmware V148 sometimes leaves RS485 control during a forced charge;
+        the Marstek then falls back to its own mode until the next write.
+        """
+        old, new = event.data["old_state"], event.data["new_state"]
+        if old is None or new is None or old.state != STATE_ON:
+            # Also after unavailable: a reconnect or restart is no drop.
+            return
+        if new.state != STATE_OFF or self._lock.locked() or self.data is None:
+            return
+        if new.context.user_id:
+            # Switched off by hand.
+            return
+        if self._released:
+            # Handed back to the Marstek (unload, dry run): RS485 off is wanted.
+            return
+        action = self.data.marstek_action
+        hold_stores_solar = self.controller.entities.hold_stores_solar
+        if self.settings.dry_run or action is None:
+            return
+        if not needs_rs485(action, hold_stores_solar):
+            return
+        now = dt_util.now()
+        self._rs485_drops.append(now)
+        self._forget_rs485(now)
+        self.async_update_listeners()
+        repairs = self._rs485_repairs
+        if self._rs485_issue or len(repairs) >= RS485_REPAIR_LIMIT:
+            # The Marstek keeps refusing: leave it to the watchdog until an
+            # hour passes without drops.
+            self._raise_rs485_issue()
+            return
+        if repairs and now - repairs[-1] < RS485_REPAIR_INTERVAL:
+            return
+        repairs.append(now)
+        current = self.data.current
+        if current is not None and current.end <= now:
+            # The plan is out of date (a replan failed); make a new one.
+            self.hass.async_create_task(self.async_request_refresh())
+            return
+        _LOGGER.info("The Marstek left RS485 control by itself; switching it on again")
+        self.config_entry.async_create_background_task(
+            self.hass, self._async_reapply(), f"{DOMAIN} rs485"
+        )
+
+    def _forget_rs485(self, now: datetime) -> None:
+        for moments in (self._rs485_drops, self._rs485_repairs):
+            while moments and now - moments[0] >= RS485_REPAIR_WINDOW:
+                moments.popleft()
+
+    @property
+    def rs485_drops(self) -> int:
+        """How often the Marstek dropped RS485 control in the last hour."""
+        self._forget_rs485(dt_util.now())
+        return len(self._rs485_drops)
+
+    def _raise_rs485_issue(self) -> None:
+        if not self._rs485_issue:
+            _LOGGER.warning(
+                "The Marstek keeps leaving RS485 control; only the watchdog "
+                "switches it on again until an hour passes without drops"
+            )
+        self._rs485_issue = True
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            ISSUE_RS485,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=ISSUE_RS485,
+            translation_placeholders={"count": str(len(self._rs485_drops))},
+        )
+
+    def _clear_rs485_issue(self, now: datetime) -> None:
+        """No drops for an hour: the warning is over."""
+        self._forget_rs485(now)
+        if not self._rs485_drops and self._rs485_issue:
+            self._rs485_issue = False
+            ir.async_delete_issue(self.hass, DOMAIN, ISSUE_RS485)
 
     def _active_loads(self) -> list[tuple[str, float | None]]:
         """Blocking loads in use: name and power in W (None for a switch)."""
@@ -361,6 +465,7 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
 
     async def _async_watchdog(self, now: datetime) -> None:
         """Re-apply the current action when the Marstek drifted away from it."""
+        self._clear_rs485_issue(now)
         if self._lock.locked() or self.data is None or self._last_apply is None:
             return
         if now - self._last_apply < timedelta(minutes=self.settings.watchdog_minutes):
@@ -572,6 +677,8 @@ class TraderCoordinator(DataUpdateCoordinator[TraderData]):
                 _LOGGER.warning(
                     "Could not return the Marstek to self-consumption: %s", err
                 )
+            else:
+                self._released = True
 
     def _log_decision(self, data: TraderData, dry_run: bool) -> None:
         key = (data.status, data.power_w, dry_run)

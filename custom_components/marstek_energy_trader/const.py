@@ -114,6 +114,13 @@ SAVINGS_INTERVAL: Final = timedelta(seconds=30)
 CONSUMPTION_PROFILE_MAX_AGE: Final = timedelta(hours=6)
 # How long every blocking load must be quiet before the battery may discharge.
 BLOCK_RELEASE_DELAY: Final = timedelta(minutes=2)
+# Firmware V148 sometimes drops RS485 control by itself; restore it at most
+# this often (the watchdog covers the rest).
+RS485_REPAIR_INTERVAL: Final = timedelta(minutes=1)
+# After this many repairs in RS485_REPAIR_WINDOW only the watchdog rewrites.
+RS485_REPAIR_LIMIT: Final = 10
+RS485_REPAIR_WINDOW: Final = timedelta(hours=1)
+ISSUE_RS485: Final = "rs485_dropping"
 DECISION_LOG_SIZE: Final = 20
 
 EVENT_ACTION: Final = f"{DOMAIN}_action"

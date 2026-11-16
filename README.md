@@ -151,7 +151,7 @@ De Marstek kent de reserve van de planner niet. Staat hij in zelfverbruik op of 
 
 Bij **proefdraaien aanzetten**, de modus **Uit** en het **verwijderen of herladen** van de integratie gaat de Marstek terug naar zelfverbruik, zodat hij nooit in een geforceerde modus blijft hangen.
 
-Een **watchdog** (standaard elke 5 minuten) controleert of de Marstek nog doet wat hij moet doen en schrijft opnieuw als dat niet zo is. Gebruikers van de Modbus-integratie melden dat de RS485-modus soms vanzelf terugvalt. Als er geen prijzen zijn, valt de integratie terug op zelfverbruik.
+Een **watchdog** (standaard elke 5 minuten) controleert of de Marstek nog doet wat hij moet doen en schrijft opnieuw als dat niet zo is. Gebruikers van de Modbus-integratie melden dat de RS485-modus soms vanzelf terugvalt (firmware V148, [issue 306](https://github.com/ViperRNMC/marstek_venus_modbus/issues/306)). Gaat RS485 vanzelf uit terwijl de batterij moet laden, ontladen of op standby staan, dan zet de integratie hem direct weer aan, hooguit één keer per minuut. Na 10 keer binnen een uur stopt dat en probeert alleen de watchdog het nog; je krijgt dan een melding onder *Instellingen → Reparaties*. Een herstart van de batterij helpt dan vaak. De melding verdwijnt na een uur zonder uitval. Het status-attribuut `rs485_drops` telt hoe vaak het afgelopen uur gebeurde. Als er geen prijzen zijn, valt de integratie terug op zelfverbruik.
 
 **Besparing.** Elke 30 seconden kijkt de integratie hoeveel de energietellers van de Marstek zijn opgelopen, en met de batterij- en netvermogens waar die energie vandaan kwam of naartoe ging:
 

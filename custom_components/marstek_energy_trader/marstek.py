@@ -141,6 +141,12 @@ def desired_state(
     ]
 
 
+def needs_rs485(action: str, discharge_limit: bool) -> bool:
+    """The action keeps the Marstek in RS485 control mode."""
+    limit = MARSTEK_MAX_POWER if discharge_limit else None
+    return (KEY_RS485, True) in desired_state(action, 0, limit)
+
+
 def _action_state(action: str, power_w: float) -> list[tuple[str, Any]]:
     if action == ACTION_CHARGE:
         return [

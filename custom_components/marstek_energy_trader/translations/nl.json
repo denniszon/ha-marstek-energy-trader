@@ -361,5 +361,11 @@
       "name": "Opnieuw plannen",
       "description": "Maak nu een nieuwe planning."
     }
+  },
+  "issues": {
+    "rs485_dropping": {
+      "title": "De Marstek verlaat steeds de RS485-modus",
+      "description": "De Marstek heeft de RS485-modus het afgelopen uur {count} keer zelf uitgezet, terwijl de integratie hem nodig had om te laden of te ontladen. Dit is een bekend probleem met Marstek-firmware V148. Marstek Energy Trader zet hem niet meer direct weer aan; de watchdog probeert het nog wel in zijn eigen tempo. Een herstart van de batterij helpt vaak. Deze waarschuwing verdwijnt na een uur zonder uitval."
+    }
   }
 }

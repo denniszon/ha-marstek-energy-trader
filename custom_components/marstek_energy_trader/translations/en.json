@@ -361,5 +361,11 @@
       "name": "Plan again",
       "description": "Make a new plan now."
     }
+  },
+  "issues": {
+    "rs485_dropping": {
+      "title": "The Marstek keeps leaving RS485 control",
+      "description": "The Marstek switched RS485 control off by itself {count} times in the last hour, while the integration needed it to charge or discharge. This is a known issue with Marstek firmware V148. Marstek Energy Trader no longer switches it on again straight away; the watchdog still tries at its own interval. Restarting the battery often helps. This warning disappears after an hour without drops."
+    }
   }
 }

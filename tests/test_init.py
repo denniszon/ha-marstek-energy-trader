@@ -28,6 +28,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import EVENT_STATE_CHANGED
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.template import Template
 
 from .common import (
@@ -152,6 +153,118 @@ async def test_watchdog_rewrites_drift(
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert [value for _, value in calls] == [True, power, "charge"]
+
+
+async def test_rs485_drop_is_repaired_at_once(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    _, calls = await _start(hass, freezer, QUARTER_PAST)
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    rs485 = marstek_entity_id("rs485_control_mode")
+    hass.states.async_set(rs485, "on")
+    power = calls[1][1]
+    hass.states.async_set(marstek_entity_id("set_charge_power"), str(power))
+    hass.states.async_set(marstek_entity_id("force_mode"), "charge")
+    calls.clear()
+
+    # The firmware drops RS485 control: it is restored without the watchdog.
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert [value for _, value in calls] == [True, power, "charge"]
+
+    # A second drop within a minute is left to the watchdog.
+    calls.clear()
+    hass.states.async_set(rs485, "on")
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert calls == []
+
+    freezer.tick(timedelta(seconds=61))
+    hass.states.async_set(rs485, "on")
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert [value for _, value in calls] == [True, power, "charge"]
+
+
+async def test_rs485_repairs_stop_after_ten_an_hour(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    _, calls = await _start(hass, freezer, QUARTER_PAST)
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": f"number.{DOMAIN}_watchdog_minutes", "value": 60},
+        blocking=True,
+    )
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    rs485 = marstek_entity_id("rs485_control_mode")
+    issues = ir.async_get(hass)
+    for _ in range(10):
+        hass.states.async_set(rs485, "on")
+        calls.clear()
+        hass.states.async_set(rs485, "off")
+        await hass.async_block_till_done()
+        assert calls
+        freezer.tick(timedelta(seconds=61))
+    assert issues.async_get_issue(DOMAIN, "rs485_dropping") is None
+
+    # The eleventh drop is left to the watchdog, with a warning.
+    hass.states.async_set(rs485, "on")
+    calls.clear()
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert calls == []
+    assert issues.async_get_issue(DOMAIN, "rs485_dropping") is not None
+    status = hass.states.get(f"sensor.{DOMAIN}_status")
+    assert status.attributes["rs485_drops"] == 11
+
+    # While the warning stands, drops are left to the watchdog.
+    freezer.tick(timedelta(minutes=30))
+    hass.states.async_set(rs485, "on")
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert calls == []
+
+    # An hour without drops clears the warning.
+    freezer.tick(timedelta(hours=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert issues.async_get_issue(DOMAIN, "rs485_dropping") is None
+
+
+async def test_rs485_off_after_release_is_left_alone(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    entry, calls = await _start(hass, freezer, QUARTER_PAST)
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    rs485 = marstek_entity_id("rs485_control_mode")
+    hass.states.async_set(rs485, "on")
+    calls.clear()
+    # Unloading hands the battery back; the Marstek reports RS485 off later.
+    await entry.runtime_data.async_release()
+    released = list(calls)
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert calls == released
+
+
+async def test_rs485_off_is_left_alone_outside_forced_modes(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    _, calls = await _start(hass, freezer, EVENING)
+    hass.states.async_set(marstek_entity_id("battery_soc"), "90")
+    rs485 = marstek_entity_id("rs485_control_mode")
+    hass.states.async_set(rs485, "on")
+    await _turn(
+        hass, "select", "select_option", f"select.{DOMAIN}_mode", option="price"
+    )
+    await _turn(hass, "switch", "turn_off", f"switch.{DOMAIN}_dry_run")
+    # Self-consumption switches RS485 off itself.
+    assert calls == [(rs485, False)]
+    calls.clear()
+    hass.states.async_set(rs485, "off")
+    await hass.async_block_till_done()
+    assert calls == []
 
 
 async def test_override_and_mode_off(
